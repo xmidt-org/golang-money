@@ -6,7 +6,7 @@ before_install:
     - sudo pip install --user codecov
 
 script:
- - go test -v
+ - go test -coverprofile=coverage.txt
 
 after_success:
-    - bash <(curl -s https://codecov.io/bash)
+    - codecov
