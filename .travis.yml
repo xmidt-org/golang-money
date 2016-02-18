@@ -3,10 +3,10 @@ go:
  - 1.5.1
 
 before_install:
-    - sudo pip install codecov
+    - sudo pip install --user codecov
 
 script:
- - go test -v
+ - go test -coverprofile=coverage.txt
 
 after_success:
-    - codecov
+    - bash <(curl -s https://codecov.io/bash)
