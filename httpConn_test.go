@@ -17,11 +17,13 @@
 package money
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"reflect"
+	//"strings"
 	"testing"
 	"time"
-	//"net/http"
-	//"strings"
 )
 
 func setupMoneyArray() (*Money, *Money) {
@@ -37,7 +39,7 @@ func setupMoneyArray() (*Money, *Money) {
 
 	m2 := new(Money)
 	m2.spanId = 98765
-	m2.traceId = "money for nothing"
+	m2.traceId = "money for something"
 	m2.parentId = 23456
 	m2.spanName = "namest"
 	m2.startTime, _ = time.Parse(time.RFC3339Nano, "10")
@@ -49,51 +51,108 @@ func setupMoneyArray() (*Money, *Money) {
 }
 
 func TestDelAllMNYHeaders(t *testing.T) {
-	/*
-		for k, _ := range rw.Header() {
-			if strings.ToLower(k) == strings.ToLower(HEADER) {
-				rw.Header().Del(k)
+	m1, m2 := setupMoneyArray()
+	var mnys []*Money
+	mnys = append(mnys, m1)
+	mnys = append(mnys, m2)
+
+	server := httptest.NewServer(
+		http.HandlerFunc(
+			func(rw http.ResponseWriter, req *http.Request) {
+				for x := range mnys {
+					rw.Header().Add(HEADER, mnys[x].ToString())
+				}
+				DelAllMNYHeaders(rw)
+			},
+		),
+	)
+	defer server.Close()
+
+	transport := &http.Transport{
+		Proxy: func(req *http.Request) (*url.URL, error) {
+			return url.Parse(server.URL)
+		},
+	}
+
+	httpClient := &http.Client{Transport: transport}
+	newReq, e := http.NewRequest("GET", server.URL, nil)
+	if e != nil {
+		log.Error(e)
+	}
+	resp, e := httpClient.Do(newReq)
+	if e != nil {
+		log.Error(e)
+	}
+	defer resp.Body.Close()
+
+	count := 0
+	for k, v := range resp.Header {
+		if k == HEADER {
+			for i := 0; i < len(v); i++ {
+				for _, m := range mnys {
+					if m.ToString() == v[i] {
+						count++
+						break
+					}
+				}
 			}
 		}
+	}
 
-		return rw
-	*/
-	/*
-		m1, m2 := setupMoneyArray()
-		var mnys []*Money
-		mnys = append(mnys, m1)
-		mnys = append(mnys, m2)
-
-		rw := *new(http.ResponseWriter)
-
-		for _, mny := range mnys {
-			rw.Header().Add("Money", mny.ToString())
-		}
-
-		c := 0
-		for k, _ := range rw.Header() {
-			if strings.ToLower(k) == strings.ToLower(HEADER) {
-				c++
-			}
-		}
-
-		rw = DelAllMNYHeaders(rw)
-		d1 := len(rw.Header()) - len(mnys)
-		d2 := len(rw.Header()) - c
-		if d1 != d2 {
-			t.Errorf("Money header removal failed")
-		}
-	*/
+	if count != 0 {
+		t.Errorf("Expected Money header count not correct, Got: %v, Expected: 0", count)
+	}
 }
 
 func TestAddAllMNYHeaders(t *testing.T) {
-	/*
-		for x := range allMNY {
-			rw.Header().Add(HEADER, allMNY[x].ToString())
-		}
+	m1, m2 := setupMoneyArray()
+	var mnys []*Money
+	mnys = append(mnys, m1)
+	mnys = append(mnys, m2)
 
-		return rw
-	*/
+	server := httptest.NewServer(
+		http.HandlerFunc(
+			func(rw http.ResponseWriter, req *http.Request) {
+				AddAllMNYHeaders(rw, mnys)
+			},
+		),
+	)
+	defer server.Close()
+
+	transport := &http.Transport{
+		Proxy: func(req *http.Request) (*url.URL, error) {
+			return url.Parse(server.URL)
+		},
+	}
+
+	httpClient := &http.Client{Transport: transport}
+	newReq, e := http.NewRequest("GET", server.URL, nil)
+	if e != nil {
+		log.Error(e)
+	}
+	resp, e := httpClient.Do(newReq)
+	if e != nil {
+		log.Error(e)
+	}
+	defer resp.Body.Close()
+
+	count := 0
+	for k, v := range resp.Header {
+		if k == HEADER {
+			for i := 0; i < len(v); i++ {
+				for _, m := range mnys {
+					if m.ToString() == v[i] {
+						count++
+						break
+					}
+				}
+			}
+		}
+	}
+
+	if count != len(mnys) {
+		t.Errorf("Expected Money header count not correct, Got: %v, Expected: %v", count, len(mnys))
+	}
 }
 
 func TestMyGrandParentIs(t *testing.T) {
@@ -164,3 +223,67 @@ func TestGetCurrentHeader(t *testing.T) {
 		t.Errorf("Incorrect header found.  expected: %v, got: %v\n", expectedId, mny.spanId)
 	}
 }
+
+/*
+func TestStart(t *testing.T) {
+	m1, m2 := setupMoneyArray()
+	var mnys []*Money
+	mnys = append(mnys, m1)
+	mnys = append(mnys, m2)
+
+	spanName := "TEST_SPAN_NAME"
+	server := httptest.NewServer(
+		http.HandlerFunc(
+			func(rw http.ResponseWriter, req *http.Request) {
+				Start(rw, req, spanName)
+			},
+		),
+	)
+	defer server.Close()
+
+	transport := &http.Transport{
+		Proxy: func(req *http.Request) (*url.URL, error) {
+			return url.Parse(server.URL)
+		},
+	}
+
+	httpClient := &http.Client{Transport: transport}
+	newReq, e := http.NewRequest("GET", server.URL, nil)
+	if e != nil {
+		log.Error(e)
+	}
+	resp, e := httpClient.Do(newReq)
+	if e != nil {
+		log.Error(e)
+	}
+	defer resp.Body.Close()
+	
+	count := 0
+	foundNewSpan := false
+	for k, v := range resp.Header {
+		if k == HEADER {
+			for i := 0; i < len(v); i++ {
+				for _, m := range mnys {
+					if m.ToString() == v[i] {
+						count++
+						break
+					}
+				}
+				
+				if strings.Contains(v[i], spanName) {
+					foundNewSpan = true
+				}
+
+			}
+		}
+	}
+	
+	if count != (len(mnys) + 1) {
+		t.Errorf("Expected Money header count not correct, Got: %v, Expected: %v", count, (len(mnys)+1))
+	}
+	
+	if !foundNewSpan {
+		t.Errorf("New Money span was not found.  Expected to find Money span with span name: %v", spanName)
+	}
+}
+*/
