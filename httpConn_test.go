@@ -21,7 +21,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"reflect"
-	//"strings"
+	"strings"
 	"testing"
 	"time"
 )
@@ -39,7 +39,7 @@ func setupMoneyArray() (*Money, *Money) {
 
 	m2 := new(Money)
 	m2.spanId = 98765
-	m2.traceId = "money for something"
+	m2.traceId = "money for nothing"
 	m2.parentId = 23456
 	m2.spanName = "namest"
 	m2.startTime, _ = time.Parse(time.RFC3339Nano, "10")
@@ -77,11 +77,11 @@ func TestDelAllMNYHeaders(t *testing.T) {
 	httpClient := &http.Client{Transport: transport}
 	newReq, e := http.NewRequest("GET", server.URL, nil)
 	if e != nil {
-		log.Error(e)
+		log.Error("request error: ", e)
 	}
 	resp, e := httpClient.Do(newReq)
 	if e != nil {
-		log.Error(e)
+		log.Error("response error: ", e)
 	}
 	defer resp.Body.Close()
 
@@ -128,11 +128,11 @@ func TestAddAllMNYHeaders(t *testing.T) {
 	httpClient := &http.Client{Transport: transport}
 	newReq, e := http.NewRequest("GET", server.URL, nil)
 	if e != nil {
-		log.Error(e)
+		log.Error("request error: ", e)
 	}
 	resp, e := httpClient.Do(newReq)
 	if e != nil {
-		log.Error(e)
+		log.Error("response error: ", e)
 	}
 	defer resp.Body.Close()
 
@@ -224,7 +224,7 @@ func TestGetCurrentHeader(t *testing.T) {
 	}
 }
 
-/*
+
 func TestStart(t *testing.T) {
 	m1, m2 := setupMoneyArray()
 	var mnys []*Money
@@ -235,6 +235,9 @@ func TestStart(t *testing.T) {
 	server := httptest.NewServer(
 		http.HandlerFunc(
 			func(rw http.ResponseWriter, req *http.Request) {
+				for _, m := range mnys {
+					req.Header.Add(HEADER, m.ToString())
+				}
 				Start(rw, req, spanName)
 			},
 		),
@@ -250,11 +253,11 @@ func TestStart(t *testing.T) {
 	httpClient := &http.Client{Transport: transport}
 	newReq, e := http.NewRequest("GET", server.URL, nil)
 	if e != nil {
-		log.Error(e)
+		log.Error("request error: ", e)
 	}
 	resp, e := httpClient.Do(newReq)
 	if e != nil {
-		log.Error(e)
+		log.Error("response error: ", e)
 	}
 	defer resp.Body.Close()
 	
@@ -272,6 +275,7 @@ func TestStart(t *testing.T) {
 				
 				if strings.Contains(v[i], spanName) {
 					foundNewSpan = true
+					count++
 				}
 
 			}
@@ -286,4 +290,86 @@ func TestStart(t *testing.T) {
 		t.Errorf("New Money span was not found.  Expected to find Money span with span name: %v", spanName)
 	}
 }
-*/
+
+
+func TestFinish(t *testing.T) {
+	m1, m2 := setupMoneyArray()
+	var mnys []*Money
+	mnys = append(mnys, m1)
+	mnys = append(mnys, m2)
+
+//	span-id=98766;trace-id=money for something;parent-id=98765;span-name=TEST_SPAN_NAME;start-time=2016-02-19T18:11:06.392281777Z;span-duration=0;error-code=0;span-success=false
+	spanName := "TEST_SPAN_NAME"
+	
+	c := new(Money)
+	c.spanId = newSpanId(m2.spanId)
+	c.traceId = m2.traceId
+	c.parentId = m2.spanId
+	c.spanName = spanName
+	c.startTime = time.Now().UTC()
+	mnys = append(mnys, c)
+
+	server := httptest.NewServer(
+		http.HandlerFunc(
+			func(rw http.ResponseWriter, req *http.Request) {
+				rec := httptest.NewRecorder()
+				for _, m := range mnys {
+					rec.Header().Add(HEADER, m.ToString())
+				}
+				rec.WriteHeader(222)
+				Finish(rw, req, rec)
+			},
+		),
+	)
+	defer server.Close()
+
+	transport := &http.Transport{
+		Proxy: func(req *http.Request) (*url.URL, error) {
+			return url.Parse(server.URL)
+		},
+	}
+
+	httpClient := &http.Client{Transport: transport}
+	newReq, e := http.NewRequest("GET", server.URL, nil)
+	if e != nil {
+		log.Error("request error: ", e)
+	}
+	resp, e := httpClient.Do(newReq)
+	if e != nil {
+		log.Error("response error: ", e)
+	}
+	defer resp.Body.Close()
+	
+	count := 0
+	currentHeader := ""
+	for k, v := range resp.Header {
+		if k == HEADER {
+			for i := 0; i < len(v); i++ {
+				for _, m := range mnys {
+					if m.ToString() == v[i] {
+						count++
+						break
+					}
+				}
+				
+				if strings.Contains(v[i], spanName) {
+					currentHeader = v[i]
+					count++
+				}
+			}
+		}
+	}
+	
+	if count != len(mnys) {
+		t.Errorf("Expected Money header count not correct, Got: %v, Expected: %v", count, len(mnys))
+	}
+	
+	if currentHeader == "" {
+		t.Errorf("New Money span was not found.  Expected to find Money span with span name: %v", spanName)
+	}
+	
+	mny := StringToObject(currentHeader)
+	if mny.spanDuration <= 0 || mny.errorCode != 222 || mny.spanSuccess != true {
+		t.Error("Money header was not updated when finished. %v", currentHeader)
+	}
+}
