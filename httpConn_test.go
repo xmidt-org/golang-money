@@ -155,34 +155,6 @@ func TestAddAllMNYHeaders(t *testing.T) {
 	}
 }
 
-func TestMyGrandParentIs(t *testing.T) {
-	m1, m2 := setupMoneyArray()
-	var mnys []Money
-	mnys = append(mnys, *m1)
-	mnys = append(mnys, *m2)
-	var id int64 = 98765
-	var expectedId int64 = 23456
-
-	mnys, mnyId, found := myGrandParentIs(mnys, id)
-
-	if !found {
-		t.Error("Descendent not found")
-	}
-	if mnyId != expectedId {
-		t.Error("Wrong descendent found")
-	}
-	if len(mnys) > 1 {
-		t.Error("Descendent not removed")
-	}
-
-	for _, m := range mnys {
-		if m.spanId == id {
-			t.Error("Current id was not removed correctly")
-		}
-	}
-
-}
-
 func TestCopyOfMNY(t *testing.T) {
 	m1, m2 := setupMoneyArray()
 	var mnys []*Money
@@ -224,7 +196,6 @@ func TestGetCurrentHeader(t *testing.T) {
 	}
 }
 
-
 func TestStart(t *testing.T) {
 	m1, m2 := setupMoneyArray()
 	var mnys []*Money
@@ -260,7 +231,7 @@ func TestStart(t *testing.T) {
 		log.Error("response error: ", e)
 	}
 	defer resp.Body.Close()
-	
+
 	count := 0
 	foundNewSpan := false
 	for k, v := range resp.Header {
@@ -272,7 +243,7 @@ func TestStart(t *testing.T) {
 						break
 					}
 				}
-				
+
 				if strings.Contains(v[i], spanName) {
 					foundNewSpan = true
 					count++
@@ -281,16 +252,15 @@ func TestStart(t *testing.T) {
 			}
 		}
 	}
-	
+
 	if count != (len(mnys) + 1) {
-		t.Errorf("Expected Money header count not correct, Got: %v, Expected: %v", count, (len(mnys)+1))
+		t.Errorf("Expected Money header count not correct, Got: %v, Expected: %v", count, (len(mnys) + 1))
 	}
-	
+
 	if !foundNewSpan {
 		t.Errorf("New Money span was not found.  Expected to find Money span with span name: %v", spanName)
 	}
 }
-
 
 func TestFinish(t *testing.T) {
 	m1, m2 := setupMoneyArray()
@@ -298,9 +268,8 @@ func TestFinish(t *testing.T) {
 	mnys = append(mnys, m1)
 	mnys = append(mnys, m2)
 
-//	span-id=98766;trace-id=money for something;parent-id=98765;span-name=TEST_SPAN_NAME;start-time=2016-02-19T18:11:06.392281777Z;span-duration=0;error-code=0;span-success=false
 	spanName := "TEST_SPAN_NAME"
-	
+
 	c := new(Money)
 	c.spanId = newSpanId(m2.spanId)
 	c.traceId = m2.traceId
@@ -339,7 +308,7 @@ func TestFinish(t *testing.T) {
 		log.Error("response error: ", e)
 	}
 	defer resp.Body.Close()
-	
+
 	count := 0
 	currentHeader := ""
 	for k, v := range resp.Header {
@@ -351,7 +320,7 @@ func TestFinish(t *testing.T) {
 						break
 					}
 				}
-				
+
 				if strings.Contains(v[i], spanName) {
 					currentHeader = v[i]
 					count++
@@ -359,15 +328,15 @@ func TestFinish(t *testing.T) {
 			}
 		}
 	}
-	
+
 	if count != len(mnys) {
 		t.Errorf("Expected Money header count not correct, Got: %v, Expected: %v", count, len(mnys))
 	}
-	
+
 	if currentHeader == "" {
 		t.Errorf("New Money span was not found.  Expected to find Money span with span name: %v", spanName)
 	}
-	
+
 	mny := StringToObject(currentHeader)
 	if mny.spanDuration <= 0 || mny.errorCode != 222 || mny.spanSuccess != true {
 		t.Error("Money header was not updated when finished. %v", currentHeader)

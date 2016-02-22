@@ -80,22 +80,6 @@ func AddAllMNYHeaders(rw http.ResponseWriter, allMNY []*Money) http.ResponseWrit
 	return rw
 }
 
-func myGrandParentIs(mnys []Money, id int64) ([]Money, int64, bool) {
-	var myParent int64
-	found := false
-	for i := 0; i < len(mnys); i++ {
-		if mnys[i].spanId == id {
-			myParent = mnys[i].parentId
-			found = true
-			mnys = append(mnys[:i], mnys[i+1:]...)
-
-			break
-		}
-	}
-
-	return mnys, myParent, found
-}
-
 func copyOfMNY(MNYs []*Money) []Money {
 	var mnys []Money
 	for i := 0; i < len(MNYs); i++ {
@@ -108,16 +92,22 @@ func copyOfMNY(MNYs []*Money) []Money {
 func GetCurrentHeader(MNYs []*Money) Money {
 	mnys := copyOfMNY(MNYs)
 
-	id := mnys[0].parentId
+	pID := mnys[0].parentId
 	for len(mnys) > 1 {
-		var found bool
-		mnys, id, found = myGrandParentIs(mnys, id)
+		found := false
+		for i := 0; i < len(mnys); i++ {
+			if mnys[i].spanId == pID {
+				pID = mnys[i].parentId
+				found = true
+				mnys = append(mnys[:i], mnys[i+1:]...)
+
+				break
+			}
+		}
 
 		if !found {
-			for x := 0; x < len(mnys); x++ {
-				mnys = append(mnys[:x], mnys[x+1:]...)
-				id = mnys[0].parentId
-			}
+			mnys = append(mnys[:0], mnys[1:]...)
+			pID = mnys[0].parentId
 		}
 	}
 
