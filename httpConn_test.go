@@ -265,15 +265,15 @@ func TestStart(t *testing.T) {
 func TestFinish(t *testing.T) {
 	m1, m2 := setupMoneyArray()
 	var mnys []*Money
-	mnys = append(mnys, m1)
 	mnys = append(mnys, m2)
+	mnys = append(mnys, m1)
 
 	spanName := "TEST_SPAN_NAME"
 
 	c := new(Money)
-	c.spanId = newSpanId(m2.spanId)
-	c.traceId = m2.traceId
-	c.parentId = m2.spanId
+	c.spanId = newSpanId(m1.spanId)
+	c.traceId = m1.traceId
+	c.parentId = m1.spanId
 	c.spanName = spanName
 	c.startTime = time.Now().UTC()
 	mnys = append(mnys, c)
