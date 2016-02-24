@@ -34,36 +34,60 @@ func init() {
 	SetLogger(tl)
 }
 
+
+func TestShowme(t *testing.T) {
+	mny := new(Money)
+	mny.showme()
+}
+
 func TestStringToObject(t *testing.T) {
 	// string to object test
-	headerval := "trace-id  =  test trace id;parent-id=  12345;%^&;span-id  =12346;span-name= WebPA-Service;start-time =2015-10-09T20:30:46.782538292Z;span-duration = 3000083865;error-code=400;http-response=999;response-duration=0;foo=bar;span-success=false"
+
+	// correct value type test
+	headerval := "trace-id  =  test trace id;parent-id=  12345;%^&;span-id  =12346;span-name= TestSpanName;start-time =2015-10-09T20:30:46.782538292Z;span-duration = 3000083865;error-code=400;http-response=999;response-duration=0;foo=bar;span-success=false"
+	traceId := "test trace id"
+	parentId := int64(12345)
+	spanId := int64(12346)
+	spanName := "TestSpanName"
+	startTime := "2015-10-09T20:30:46.782538292Z"
+	spanDuration := int64(3000083865)
+	errorCode := 400
+	//httpResponse := 999
+	//responseDuration := int64(0)
+	//foo := "bar"
+	spanSuccess := false
+	
 	mny := StringToObject(headerval)
 
-	if mny.spanId != int64(12346) {
-		t.Errorf("spanId expected 12346, got %v", mny.spanId)
+	if mny.spanId != spanId {
+		t.Errorf("spanId expected %v, got %v", spanId, mny.spanId)
 	}
-	if mny.traceId != "test trace id" {
-		t.Errorf("traceId expected \"test trace id\", got %v", mny.traceId)
+	if mny.traceId != traceId {
+		t.Errorf("traceId expected v%, got %v", traceId, mny.traceId)
 	}
-	if mny.parentId != int64(12345) {
-		t.Errorf("parentId expected 12345, got %v", mny.parentId)
+	if mny.parentId != parentId {
+		t.Errorf("parentId expected %v, got %v", parentId, mny.parentId)
 	}
-	if mny.spanName != "WebPA-Service" {
-		t.Errorf("expected spanName \"WebPA-Service\", got %v", mny.spanName)
+	if mny.spanName != spanName {
+		t.Errorf("expected spanName %v, got %v", spanName, mny.spanName)
 	}
-	st, _ := time.Parse(time.RFC3339Nano, "2015-10-09T20:30:46.782538292Z")
+	st, _ := time.Parse(time.RFC3339Nano, startTime )
 	if mny.startTime != st {
-		t.Errorf("expected startTime 2015-10-09 20:30:46.782538292 +0000 UTC, got %v", mny.startTime.Format(time.RFC3339Nano))
+		t.Errorf("expected startTime %v, got %v", st, mny.startTime.Format(time.RFC3339Nano))
 	}
-	if mny.spanDuration != int64(3000083865) {
-		t.Errorf("expected spanDuration 3000083865, got %v", mny.spanDuration)
+	if mny.spanDuration != spanDuration {
+		t.Errorf("expected spanDuration %v, got %v", spanDuration, mny.spanDuration)
 	}
-	if mny.errorCode != 400 {
-		t.Errorf("expected errorCode 400, got %v", mny.errorCode)
+	if mny.errorCode != errorCode {
+		t.Errorf("expected errorCode %v, got %v", errorCode, mny.errorCode)
 	}
-	if mny.spanSuccess != false {
-		t.Errorf("expected spanSuccess false, got %v", mny.spanSuccess)
+	if mny.spanSuccess != spanSuccess {
+		t.Errorf("expected spanSuccess %v, got %v", spanSuccess, mny.spanSuccess)
 	}
+	
+	// incorrect value type test
+	bad_headerval := "trace-id=97531;parent-id=BadParentID;%^&;span-id=BadSpanID;span-name=false;start-time=BadStartTime;span-duration=BadSpanDuration;error-code=BadErrorCode;http-response=BadHttpResponse;response-duration=BadResponseDuration;foo=87654;span-success=BadSpanSuccess"
+	StringToObject(bad_headerval)
 }
 
 func TestToString(t *testing.T) {
