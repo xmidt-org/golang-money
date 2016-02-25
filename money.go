@@ -27,12 +27,6 @@ const (
 	HEADER = "Money"
 )
 
-//var log LGR.Logger
-
-//func SetLogger(lg LGR.Logger) {
-//	log = lg
-//}
-
 type Money struct {
 	spanId       int64
 	traceId      string
