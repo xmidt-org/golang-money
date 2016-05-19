@@ -148,7 +148,7 @@ func newSpanId(parentid int64) int64 {
 func (mny *Money) AddResults(errorCode int, spanSuccess bool) *Money {
 	mny.errorCode = errorCode
 	mny.spanSuccess = spanSuccess
-	mny.spanDuration = time.Since(mny.startTime).Nanoseconds()
+	mny.spanDuration = int64(time.Since(mny.startTime) / time.Microsecond)
 
 	return mny
 }
