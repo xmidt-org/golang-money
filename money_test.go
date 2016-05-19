@@ -126,6 +126,8 @@ func TestAddResults(t *testing.T) {
 	headerval := "trace-id  =  test trace id;parent-id=  12345;span-id  =12346;span-name= WebPA-Service;start-time =2015-10-09T20:30:46.782538292Z"
 	mny := NewChild(headerval, "WebPA-Service")
 
+	time.Sleep(1 * time.Second)
+
 	mny.AddResults(200, true)
 
 	if mny.errorCode != 200 {
@@ -134,7 +136,7 @@ func TestAddResults(t *testing.T) {
 	if mny.spanSuccess != true {
 		t.Errorf("expected spanSuccess to be true, got %v", mny.spanSuccess)
 	}
-	if mny.spanDuration <= 0 {
+	if mny.spanDuration < 1 {
 		t.Errorf("expected spanDuration to be greater than 0, got %v", mny.spanDuration)
 	}
 }
