@@ -63,7 +63,7 @@ func Decorate(h Handler, ds ...(func(Handler) Handler)) Handler {
 }
 
 func DelAllMNYHeaders(rw http.ResponseWriter) http.ResponseWriter {
-	for k, _ := range rw.Header() {
+	for k := range rw.Header() {
 		if strings.ToLower(k) == strings.ToLower(HEADER) {
 			rw.Header().Del(k)
 		}
