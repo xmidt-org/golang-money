@@ -3,7 +3,9 @@
 ##Distributed Tracing using Go
 This is the Go implementation of [Money](https://github.com/Comcast/money)
 
-[![Build Status](https://travis-ci.org/Comcast/golang-money.svg?branch=master)](https://travis-ci.org/Comcast/golang-money) [![codecov.io](http://codecov.io/github/Comcast/golang-money/coverage.svg?branch=master)](http://codecov.io/github/Comcast/golang-money?branch=master)
+[![Build Status](https://travis-ci.org/Comcast/golang-money.svg?branch=master)](https://travis-ci.org/Comcast/golang-money) 
+[![codecov.io](http://codecov.io/github/Comcast/golang-money/coverage.svg?branch=master)](http://codecov.io/github/Comcast/golang-money?branch=master) 
+[![Go Report Card](https://goreportcard.com/badge/github.com/Comcast/golang-money)](https://goreportcard.com/report/github.com/Comcast/golang-money) 
 
 
 ###A Money header looks like the following
