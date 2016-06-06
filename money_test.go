@@ -34,7 +34,6 @@ func init() {
 	SetLogger(tl)
 }
 
-
 func TestShowme(t *testing.T) {
 	mny := new(Money)
 	mny.showme()
@@ -56,7 +55,7 @@ func TestStringToObject(t *testing.T) {
 	//responseDuration := int64(0)
 	//foo := "bar"
 	spanSuccess := false
-	
+
 	mny := StringToObject(headerval)
 
 	if mny.spanId != spanId {
@@ -71,7 +70,7 @@ func TestStringToObject(t *testing.T) {
 	if mny.spanName != spanName {
 		t.Errorf("expected spanName %v, got %v", spanName, mny.spanName)
 	}
-	st, _ := time.Parse(time.RFC3339Nano, startTime )
+	st, _ := time.Parse(time.RFC3339Nano, startTime)
 	if mny.startTime != st {
 		t.Errorf("expected startTime %v, got %v", st, mny.startTime.Format(time.RFC3339Nano))
 	}
@@ -84,7 +83,7 @@ func TestStringToObject(t *testing.T) {
 	if mny.spanSuccess != spanSuccess {
 		t.Errorf("expected spanSuccess %v, got %v", spanSuccess, mny.spanSuccess)
 	}
-	
+
 	// incorrect value type test
 	bad_headerval := "trace-id=97531;parent-id=BadParentID;%^&;span-id=BadSpanID;span-name=false;start-time=BadStartTime;span-duration=BadSpanDuration;error-code=BadErrorCode;http-response=BadHttpResponse;response-duration=BadResponseDuration;foo=87654;span-success=BadSpanSuccess"
 	StringToObject(bad_headerval)
