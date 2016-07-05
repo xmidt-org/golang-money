@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	HEADER = "Money"
+	HEADER = "X-MoneyTrace"
 )
 
 type Money struct {
