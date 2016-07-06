@@ -49,6 +49,15 @@ func (mny *Money) showme() {
 	fmt.Printf("spanSuccess:  %v\n", mny.spanSuccess)
 }
 
+func (m *Money) setSpanId(val int64)        {m.spanId = val}
+func (m *Money) setTraceId(val string)      {m.traceId = val}
+func (m *Money) setParentId(val int64)      {m.parentId = val}
+func (m *Money) setSpanName(val string)     {m.spanName = val}
+func (m *Money) setStartTime(val time.Time) {m.startTime = val}
+func (m *Money) setSpanDuration(val int64)  {m.spanDuration = val}
+func (m *Money) setErrorCode(val int)       {m.errorCode = val}
+func (m *Money) setSpanSuccess(val bool)    {m.spanSuccess = val}
+
 func StringToObject(headerValue string) *Money {
 	var mny Money
 
