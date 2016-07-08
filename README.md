@@ -10,7 +10,7 @@ This is the Go implementation of [Money](https://github.com/Comcast/money)
 
 ###A Money header looks like the following
 ```
-Money: trace-id=YourTraceId;parent-id=12345;span-id=12346;span-name=YourSpanName;start-time=2016-02-15T20:30:46.782538292Z;span-duration=3000083865;error-code=200;span-success=true
+X-MoneyTrace: trace-id=YourTraceId;parent-id=12345;span-id=12346;span-name=YourSpanName;start-time=2016-02-15T20:30:46.782538292Z;span-duration=3000083865;error-code=200;span-success=true
 ```
 
 |Span Data   |Description                     |
@@ -34,5 +34,5 @@ Money.Decorate( [http.Handler], Money.AddToHandler( [spanName] ))
 
 The basics to start a Money trace are a trace id name and starting span id number.
 ```
-Money:trace-id=YourTraceId;span-id=12345;
+X-MoneyTrace:trace-id=YourTraceId;span-id=12345;
 ```
