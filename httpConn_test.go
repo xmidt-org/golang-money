@@ -87,7 +87,7 @@ func TestDelAllMNYHeaders(t *testing.T) {
 
 	count := 0
 	for k, v := range resp.Header {
-		if strings.ToLower(k) == strings.ToLower(HEADER) {
+		if strings.EqualFold(k, HEADER) {
 			for i := 0; i < len(v); i++ {
 				for _, m := range mnys {
 					if m.ToString() == v[i] {
@@ -138,7 +138,7 @@ func TestAddAllMNYHeaders(t *testing.T) {
 
 	count := 0
 	for k, v := range resp.Header {
-		if strings.ToLower(k) == strings.ToLower(HEADER) {
+		if strings.EqualFold(k, HEADER) {
 			for i := 0; i < len(v); i++ {
 				for _, m := range mnys {
 					if m.ToString() == v[i] {
@@ -235,7 +235,7 @@ func TestStart(t *testing.T) {
 	count := 0
 	foundNewSpan := false
 	for k, v := range resp.Header {
-		if strings.ToLower(k) == strings.ToLower(HEADER) {
+		if strings.EqualFold(k, HEADER) {
 			for i := 0; i < len(v); i++ {
 				for _, m := range mnys {
 					if m.ToString() == v[i] {
@@ -312,7 +312,7 @@ func TestFinish(t *testing.T) {
 	count := 0
 	currentHeader := ""
 	for k, v := range resp.Header {
-		if strings.ToLower(k) == strings.ToLower(HEADER) {
+		if strings.EqualFold(k, HEADER) {
 			for i := 0; i < len(v); i++ {
 				for _, m := range mnys {
 					if m.ToString() == v[i] {
