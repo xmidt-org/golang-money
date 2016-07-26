@@ -348,6 +348,6 @@ func TestFinish(t *testing.T) {
 
 	mny := StringToObject(currentHeader)
 	if mny.spanDuration <= 0 || mny.errorCode != 222 || mny.spanSuccess != true {
-		t.Error("Money header was not updated when finished. %v", currentHeader)
+		t.Errorf("Money header was not updated when finished. %v", currentHeader)
 	}
 }

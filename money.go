@@ -24,9 +24,10 @@ import (
 )
 
 const (
-	HEADER = "Money"
+	HEADER = "Money"  // This is the the header value that will be found and set
 )
 
+// The Money object
 type Money struct {
 	spanId       int64
 	traceId      string
@@ -49,6 +50,7 @@ func (mny *Money) showme() {
 	fmt.Printf("spanSuccess:  %v\n", mny.spanSuccess)
 }
 
+
 func (m *Money) SetSpanId(val int64)        {m.spanId = val}
 func (m *Money) SetTraceId(val string)      {m.traceId = val}
 func (m *Money) SetParentId(val int64)      {m.parentId = val}
@@ -58,6 +60,7 @@ func (m *Money) SetSpanDuration(val int64)  {m.spanDuration = val}
 func (m *Money) SetErrorCode(val int)       {m.errorCode = val}
 func (m *Money) SetSpanSuccess(val bool)    {m.spanSuccess = val}
 
+// Convert a Money string into a Money object
 func StringToObject(headerValue string) *Money {
 	var mny Money
 
@@ -73,7 +76,8 @@ func StringToObject(headerValue string) *Money {
 			case "span-id":
 				i, err := strconv.ParseInt(val, 10, 64)
 				if err != nil {
-					log.Error("Unable to convert Money span-id string value to int64: %s", val)
+					errmsg := fmt.Sprintf("Unable to convert Money span-id string value to int64: %s", val)
+					log.Error(errmsg)
 				}
 				mny.spanId = int64(i)
 
@@ -83,7 +87,8 @@ func StringToObject(headerValue string) *Money {
 			case "parent-id":
 				i, err := strconv.ParseInt(val, 10, 64)
 				if err != nil {
-					log.Error("Unable to convert Money parent-id string value to int64: %s", val)
+					errmsg := fmt.Sprintf("Unable to convert Money parent-id string value to int64: %s", val)
+					log.Error(errmsg)
 				}
 				mny.parentId = int64(i)
 
@@ -93,28 +98,32 @@ func StringToObject(headerValue string) *Money {
 			case "start-time":
 				t, err := time.Parse(time.RFC3339Nano, val)
 				if err != nil {
-					log.Error("Unable to convert Money start-time string value to time: %s", val)
+					errmsg := fmt.Sprintf("Unable to convert Money start-time string value to time: %s", val)
+					log.Error(errmsg)
 				}
 				mny.startTime = t
 
 			case "span-duration":
 				i, err := strconv.ParseInt(val, 10, 64)
 				if err != nil {
-					log.Error("Unable to convert Money span-duration string value to int64: %s", val)
+					errmsg := fmt.Sprintf("Unable to convert Money span-duration string value to int64: %s", val)
+					log.Error(errmsg)
 				}
 				mny.spanDuration = i
 
 			case "error-code":
 				i, err := strconv.ParseInt(val, 10, 0)
 				if err != nil {
-					log.Error("Unable to convert Money error-code string value to int: %s", val)
+					errmsg := fmt.Sprintf("Unable to convert Money error-code string value to int: %s", val)
+					log.Error(errmsg)
 				}
 				mny.errorCode = int(i)
 
 			case "span-success":
 				b, err := strconv.ParseBool(val)
 				if err != nil {
-					log.Error("Unable to convert Money span-success string value to bool: %s", val)
+					errmsg := fmt.Sprintf("Unable to convert Money span-success string value to bool: %s", val)
+					log.Error(errmsg)
 				}
 				mny.spanSuccess = b
 
@@ -128,13 +137,15 @@ func StringToObject(headerValue string) *Money {
 				log.Debug("Money key unknown: %s", key)
 			}
 		} else {
-			log.Error("Money header, bad key/value pair: %v.  Header: %v", kv, headerValue)
+			errmsg := fmt.Sprintf("Money header, bad key/value pair: %v.  Header: %v", kv, headerValue)
+			log.Error(errmsg)
 		}
 	}
 
 	return &mny
 }
 
+// Returns a Money object as a string
 func (mny *Money) ToString() string {
 	var result string
 
@@ -154,6 +165,9 @@ func newSpanId(parentid int64) int64 {
 	return parentid + 1
 }
 
+// Sets the final results of trace call
+// errorCode: http StatusCode
+// spanSuccess: was this instance a success or not
 func (mny *Money) AddResults(errorCode int, spanSuccess bool) *Money {
 	mny.errorCode = errorCode
 	mny.spanSuccess = spanSuccess
@@ -162,6 +176,9 @@ func (mny *Money) AddResults(errorCode int, spanSuccess bool) *Money {
 	return mny
 }
 
+// Create a new Money object based on another Money object
+// parentHeader:  use to gather information to set parent information
+// spanName: sets span-name
 func NewChild(parentHeader, spanName string) *Money {
 	pMNY := StringToObject(parentHeader)
 	cMNY := new(Money)

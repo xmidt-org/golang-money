@@ -62,7 +62,7 @@ func TestStringToObject(t *testing.T) {
 		t.Errorf("spanId expected %v, got %v", spanId, mny.spanId)
 	}
 	if mny.traceId != traceId {
-		t.Errorf("traceId expected v%, got %v", traceId, mny.traceId)
+		t.Errorf("traceId expected %v, got %v", traceId, mny.traceId)
 	}
 	if mny.parentId != parentId {
 		t.Errorf("parentId expected %v, got %v", parentId, mny.parentId)
@@ -85,8 +85,8 @@ func TestStringToObject(t *testing.T) {
 	}
 
 	// incorrect value type test
-	bad_headerval := "trace-id=97531;parent-id=BadParentID;%^&;span-id=BadSpanID;span-name=false;start-time=BadStartTime;span-duration=BadSpanDuration;error-code=BadErrorCode;http-response=BadHttpResponse;response-duration=BadResponseDuration;foo=87654;span-success=BadSpanSuccess"
-	StringToObject(bad_headerval)
+	badHeaderVal := "trace-id=97531;parent-id=BadParentID;%^&;span-id=BadSpanID;span-name=false;start-time=BadStartTime;span-duration=BadSpanDuration;error-code=BadErrorCode;http-response=BadHttpResponse;response-duration=BadResponseDuration;foo=87654;span-success=BadSpanSuccess"
+	StringToObject(badHeaderVal)
 }
 
 func TestToString(t *testing.T) {
