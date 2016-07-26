@@ -62,21 +62,47 @@ func Decorate(h Handler, ds ...(func(Handler) Handler)) Handler {
 	return decorated
 }
 
-func DelAllMNYHeaders(rw http.ResponseWriter) http.ResponseWriter {
-	for k := range rw.Header() {
-		if strings.ToLower(k) == strings.ToLower(HEADER) {
-			rw.Header().Del(k)
+
+func DelAllMNYHeaders(header http.Header) http.Header {
+	for h := range header {
+		if strings.EqualFold(h, HEADER) {
+			header.Del(h)
+			return header
 		}
 	}
-
-	return rw
+	
+	return header
 }
 
-func AddAllMNYHeaders(rw http.ResponseWriter, allMNY []*Money) http.ResponseWriter {
+func AddAllMNYHeaders(header http.Header, allMNY []*Money) http.Header {
 	for x := range allMNY {
-		rw.Header().Add(HEADER, allMNY[x].ToString())
+		header.Add(HEADER, allMNY[x].ToString())
 	}
+	
+	return header
+}
 
+func UpdateMNYHeaderReq(req *http.Request, allMNY []*Money) *http.Request {
+	header := DelAllMNYHeaders(req.Header)
+	header = AddAllMNYHeaders(header, allMNY)
+	req.Header = header
+	
+	return req
+}
+
+func UpdateMNYHeaderRW(rw http.ResponseWriter, allMNY []*Money) http.ResponseWriter {
+	header := DelAllMNYHeaders(rw.Header())
+	header = AddAllMNYHeaders(header, allMNY)
+	if mnyheader, ok := header[ http.CanonicalHeaderKey(HEADER) ]; ok {
+		for i:=0; i<len(mnyheader); i++ {
+			if i == 0 {
+				rw.Header().Set(HEADER, mnyheader[i])
+			} else {
+				rw.Header().Add(HEADER, mnyheader[i])
+			}
+		}
+	}
+	
 	return rw
 }
 
@@ -117,19 +143,20 @@ func GetCurrentHeader(MNYs []*Money) Money {
 func Start(rw http.ResponseWriter, req *http.Request, spanName string) (http.ResponseWriter, *http.Request) {
 	var allMNY []*Money
 	for k, v := range req.Header {
-		if strings.ToLower(k) == strings.ToLower(HEADER) {
+		if strings.EqualFold(k, HEADER) {
 			for i := range v {
 				allMNY = append(allMNY, StringToObject(v[i]))
 			}
+			break
 		}
 	}
-
+	
 	pMNY := GetCurrentHeader(allMNY)
 	cMNY := NewChild(pMNY.ToString(), spanName)
 	allMNY = append(allMNY, cMNY)
 
-	rw = DelAllMNYHeaders(rw)
-	rw = AddAllMNYHeaders(rw, allMNY)
+	req = UpdateMNYHeaderReq(req, allMNY)
+	rw = UpdateMNYHeaderRW(rw, allMNY)
 
 	return rw, req
 }
@@ -147,10 +174,11 @@ func Finish(rw http.ResponseWriter, req *http.Request, rec *httptest.ResponseRec
 
 	var allMNY []*Money
 	for k, v := range rw.Header() {
-		if strings.ToLower(k) == strings.ToLower(HEADER) {
+		if strings.EqualFold(k, HEADER) {
 			for i := range v {
 				allMNY = append(allMNY, StringToObject(v[i]))
 			}
+			break
 		}
 	}
 
@@ -170,8 +198,8 @@ func Finish(rw http.ResponseWriter, req *http.Request, rec *httptest.ResponseRec
 		}
 	}
 
-	rw = DelAllMNYHeaders(rw)
-	rw = AddAllMNYHeaders(rw, allMNY)
+	req = UpdateMNYHeaderReq(req, allMNY)
+	rw = UpdateMNYHeaderRW(rw, allMNY)
 
 	rw.WriteHeader(mny.errorCode)
 	rw.Write([]byte(rec.Body.String()))
