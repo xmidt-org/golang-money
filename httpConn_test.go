@@ -62,7 +62,16 @@ func TestDelAllMNYHeaders(t *testing.T) {
 				for x := range mnys {
 					rw.Header().Add(HEADER, mnys[x].ToString())
 				}
-				DelAllMNYHeaders(rw)
+				headers := DelAllMNYHeaders(rw.Header())
+				for k, v := range headers {
+					for i:=0; i < len(v); i++ {
+						if i == 0 {
+							rw.Header().Set(k, v[i])
+						} else {
+							rw.Header().Add(k, v[i])
+						}
+					}
+				}
 			},
 		),
 	)
@@ -113,7 +122,7 @@ func TestAddAllMNYHeaders(t *testing.T) {
 	server := httptest.NewServer(
 		http.HandlerFunc(
 			func(rw http.ResponseWriter, req *http.Request) {
-				AddAllMNYHeaders(rw, mnys)
+				AddAllMNYHeaders(rw.Header(), mnys)
 			},
 		),
 	)
@@ -209,7 +218,7 @@ func TestStart(t *testing.T) {
 				for _, m := range mnys {
 					req.Header.Add(HEADER, m.ToString())
 				}
-				Start(rw, req, spanName)
+				rw, req = Start(rw, req, spanName)
 			},
 		),
 	)
