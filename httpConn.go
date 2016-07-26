@@ -73,7 +73,7 @@ func DelAllMNYHeaders(header http.Header) http.Header {
 			return header
 		}
 	}
-	
+
 	return header
 }
 
@@ -82,7 +82,7 @@ func AddAllMNYHeaders(header http.Header, allMNY []*Money) http.Header {
 	for x := range allMNY {
 		header.Add(HEADER, allMNY[x].ToString())
 	}
-	
+
 	return header
 }
 
@@ -91,7 +91,7 @@ func UpdateMNYHeaderReq(req *http.Request, allMNY []*Money) *http.Request {
 	header := DelAllMNYHeaders(req.Header)
 	header = AddAllMNYHeaders(header, allMNY)
 	req.Header = header
-	
+
 	return req
 }
 
@@ -99,8 +99,8 @@ func UpdateMNYHeaderReq(req *http.Request, allMNY []*Money) *http.Request {
 func UpdateMNYHeaderRW(rw http.ResponseWriter, allMNY []*Money) http.ResponseWriter {
 	header := DelAllMNYHeaders(rw.Header())
 	header = AddAllMNYHeaders(header, allMNY)
-	if mnyheader, ok := header[ http.CanonicalHeaderKey(HEADER) ]; ok {
-		for i:=0; i<len(mnyheader); i++ {
+	if mnyheader, ok := header[http.CanonicalHeaderKey(HEADER)]; ok {
+		for i := 0; i < len(mnyheader); i++ {
 			if i == 0 {
 				rw.Header().Set(HEADER, mnyheader[i])
 			} else {
@@ -108,7 +108,7 @@ func UpdateMNYHeaderRW(rw http.ResponseWriter, allMNY []*Money) http.ResponseWri
 			}
 		}
 	}
-	
+
 	return rw
 }
 
@@ -158,7 +158,7 @@ func Start(rw http.ResponseWriter, req *http.Request, spanName string) (http.Res
 			break
 		}
 	}
-	
+
 	pMNY := GetCurrentHeader(allMNY)
 	cMNY := NewChild(pMNY.ToString(), spanName)
 	allMNY = append(allMNY, cMNY)
