@@ -62,7 +62,7 @@ func TestStringToObject(t *testing.T) {
 		t.Errorf("spanId expected %v, got %v", spanId, mny.spanId)
 	}
 	if mny.traceId != traceId {
-		t.Errorf("traceId expected v%, got %v", traceId, mny.traceId)
+		t.Errorf("traceId expected %v, got %v", traceId, mny.traceId)
 	}
 	if mny.parentId != parentId {
 		t.Errorf("parentId expected %v, got %v", parentId, mny.parentId)

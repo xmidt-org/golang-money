@@ -73,7 +73,8 @@ func StringToObject(headerValue string) *Money {
 			case "span-id":
 				i, err := strconv.ParseInt(val, 10, 64)
 				if err != nil {
-					log.Error("Unable to convert Money span-id string value to int64: %s", val)
+					errmsg := fmt.Sprintf("Unable to convert Money span-id string value to int64: %s", val)
+					log.Error(errmsg)
 				}
 				mny.spanId = int64(i)
 
@@ -83,7 +84,8 @@ func StringToObject(headerValue string) *Money {
 			case "parent-id":
 				i, err := strconv.ParseInt(val, 10, 64)
 				if err != nil {
-					log.Error("Unable to convert Money parent-id string value to int64: %s", val)
+					errmsg := fmt.Sprintf("Unable to convert Money parent-id string value to int64: %s", val)
+					log.Error(errmsg)
 				}
 				mny.parentId = int64(i)
 
@@ -93,28 +95,32 @@ func StringToObject(headerValue string) *Money {
 			case "start-time":
 				t, err := time.Parse(time.RFC3339Nano, val)
 				if err != nil {
-					log.Error("Unable to convert Money start-time string value to time: %s", val)
+					errmsg := fmt.Sprintf("Unable to convert Money start-time string value to time: %s", val)
+					log.Error(errmsg)
 				}
 				mny.startTime = t
 
 			case "span-duration":
 				i, err := strconv.ParseInt(val, 10, 64)
 				if err != nil {
-					log.Error("Unable to convert Money span-duration string value to int64: %s", val)
+					errmsg := fmt.Sprintf("Unable to convert Money span-duration string value to int64: %s", val)
+					log.Error(errmsg)
 				}
 				mny.spanDuration = i
 
 			case "error-code":
 				i, err := strconv.ParseInt(val, 10, 0)
 				if err != nil {
-					log.Error("Unable to convert Money error-code string value to int: %s", val)
+					errmsg := fmt.Sprintf("Unable to convert Money error-code string value to int: %s", val)
+					log.Error(errmsg)
 				}
 				mny.errorCode = int(i)
 
 			case "span-success":
 				b, err := strconv.ParseBool(val)
 				if err != nil {
-					log.Error("Unable to convert Money span-success string value to bool: %s", val)
+					errmsg := fmt.Sprintf("Unable to convert Money span-success string value to bool: %s", val)
+					log.Error(errmsg)
 				}
 				mny.spanSuccess = b
 
@@ -128,7 +134,8 @@ func StringToObject(headerValue string) *Money {
 				log.Debug("Money key unknown: %s", key)
 			}
 		} else {
-			log.Error("Money header, bad key/value pair: %v.  Header: %v", kv, headerValue)
+			errmsg := fmt.Sprintf("Money header, bad key/value pair: %v.  Header: %v", kv, headerValue)
+			log.Error(errmsg)
 		}
 	}
 
