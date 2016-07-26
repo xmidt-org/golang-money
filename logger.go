@@ -16,6 +16,7 @@
 
 package money
 
+// Logger interface for Money
 type Logger interface {
 	Debug(params ...interface{})
 	Error(params ...interface{})
@@ -23,6 +24,7 @@ type Logger interface {
 
 var log Logger
 
+// Call to set a logger.  Must implement the methods in Logger
 func SetLogger(lg Logger) {
 	log = lg
 }

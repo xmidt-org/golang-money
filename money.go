@@ -24,9 +24,10 @@ import (
 )
 
 const (
-	HEADER = "Money"
+	HEADER = "Money"  // This is the the header value that will be found and set
 )
 
+// The Money object
 type Money struct {
 	spanId       int64
 	traceId      string
@@ -49,6 +50,7 @@ func (mny *Money) showme() {
 	fmt.Printf("spanSuccess:  %v\n", mny.spanSuccess)
 }
 
+
 func (m *Money) SetSpanId(val int64)        {m.spanId = val}
 func (m *Money) SetTraceId(val string)      {m.traceId = val}
 func (m *Money) SetParentId(val int64)      {m.parentId = val}
@@ -58,6 +60,7 @@ func (m *Money) SetSpanDuration(val int64)  {m.spanDuration = val}
 func (m *Money) SetErrorCode(val int)       {m.errorCode = val}
 func (m *Money) SetSpanSuccess(val bool)    {m.spanSuccess = val}
 
+// Convert a Money string into a Money object
 func StringToObject(headerValue string) *Money {
 	var mny Money
 
@@ -142,6 +145,7 @@ func StringToObject(headerValue string) *Money {
 	return &mny
 }
 
+// Returns a Money object as a string
 func (mny *Money) ToString() string {
 	var result string
 
@@ -161,6 +165,9 @@ func newSpanId(parentid int64) int64 {
 	return parentid + 1
 }
 
+// Sets the final results of trace call
+// errorCode: http StatusCode
+// spanSuccess: was this instance a success or not
 func (mny *Money) AddResults(errorCode int, spanSuccess bool) *Money {
 	mny.errorCode = errorCode
 	mny.spanSuccess = spanSuccess
@@ -169,6 +176,9 @@ func (mny *Money) AddResults(errorCode int, spanSuccess bool) *Money {
 	return mny
 }
 
+// Create a new Money object based on another Money object
+// parentHeader:  use to gather information to set parent information
+// spanName: sets span-name
 func NewChild(parentHeader, spanName string) *Money {
 	pMNY := StringToObject(parentHeader)
 	cMNY := new(Money)

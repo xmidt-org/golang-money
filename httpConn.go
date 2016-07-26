@@ -22,6 +22,7 @@ import (
 	"strings"
 )
 
+// Money's version of an http.Handler to decorate
 type Handler interface {
 	ServeHTTP(http.ResponseWriter, *http.Request)
 }
@@ -36,6 +37,8 @@ func (f HandlerFunc) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 // A Decorator wraps a Handler with extra behaviour
 type Decorator func(Handler) Handler
 
+// Used when decorating an http.HandlerFunc()
+// spanName: will set the span-name
 func AddToHandler(spanName string) Decorator {
 	return func(f Handler) Handler {
 		return HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -62,7 +65,7 @@ func Decorate(h Handler, ds ...(func(Handler) Handler)) Handler {
 	return decorated
 }
 
-
+// Removes the Money header from the http.Header
 func DelAllMNYHeaders(header http.Header) http.Header {
 	for h := range header {
 		if strings.EqualFold(h, HEADER) {
@@ -74,6 +77,7 @@ func DelAllMNYHeaders(header http.Header) http.Header {
 	return header
 }
 
+// Adds Money values to the http.Header
 func AddAllMNYHeaders(header http.Header, allMNY []*Money) http.Header {
 	for x := range allMNY {
 		header.Add(HEADER, allMNY[x].ToString())
@@ -82,6 +86,7 @@ func AddAllMNYHeaders(header http.Header, allMNY []*Money) http.Header {
 	return header
 }
 
+// Updates the Money Header values for a *http.Request
 func UpdateMNYHeaderReq(req *http.Request, allMNY []*Money) *http.Request {
 	header := DelAllMNYHeaders(req.Header)
 	header = AddAllMNYHeaders(header, allMNY)
@@ -90,6 +95,7 @@ func UpdateMNYHeaderReq(req *http.Request, allMNY []*Money) *http.Request {
 	return req
 }
 
+// Updates the Money Header values for a http.ResponseWriter
 func UpdateMNYHeaderRW(rw http.ResponseWriter, allMNY []*Money) http.ResponseWriter {
 	header := DelAllMNYHeaders(rw.Header())
 	header = AddAllMNYHeaders(header, allMNY)
@@ -115,6 +121,7 @@ func copyOfMNY(MNYs []*Money) []Money {
 	return mnys
 }
 
+// Finds the Money value for this instance
 func GetCurrentHeader(MNYs []*Money) Money {
 	mnys := copyOfMNY(MNYs)
 
@@ -140,6 +147,7 @@ func GetCurrentHeader(MNYs []*Money) Money {
 	return mnys[0]
 }
 
+// Start of the money trace process
 func Start(rw http.ResponseWriter, req *http.Request, spanName string) (http.ResponseWriter, *http.Request) {
 	var allMNY []*Money
 	for k, v := range req.Header {
@@ -161,6 +169,7 @@ func Start(rw http.ResponseWriter, req *http.Request, spanName string) (http.Res
 	return rw, req
 }
 
+// End of the money trace process
 func Finish(rw http.ResponseWriter, req *http.Request, rec *httptest.ResponseRecorder) (http.ResponseWriter, *http.Request) {
 	for k, v := range rec.HeaderMap {
 		for i := range v {
