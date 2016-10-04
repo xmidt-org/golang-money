@@ -283,17 +283,3 @@ func End(rw http.ResponseWriter, allMNY []*Money, cMNY *Money, statusCode int, s
 
 	return rw
 }
-
-
-/*
-AT BEGINING
-get the request money headers
-add a new money span (current)
-
-IN MIDDLE
-if any request is made sending money headers update money array with response money headers
-
-AT END
-addResults to current span
-update the responseWriter money header
-*/
