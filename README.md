@@ -24,13 +24,15 @@ Money: trace-id=YourTraceId;parent-id=12345;span-id=12346;span-name=YourSpanName
 |errorCode   |current span's error code       |
 |spanSuccess |Was the current span successful |
 
-###Functionality to handle the Money header
-####Decorate you're handlers with the Money handler
+###Functionality to handle the Money header can be added in two ways
+####1. Decorate you're handlers with the Money handler
 ```
 Money.Decorate( [http.Handler], Money.AddToHandler( [spanName] ))
 ```
 
-####Start server and make a request that includes a Money header
+####2. Use the Money Begin and End functions by adding them to your http.Handler
+
+###Start server and make a request that includes a Money header
 
 The basics to start a Money trace are a trace id name and starting span id number.
 ```
