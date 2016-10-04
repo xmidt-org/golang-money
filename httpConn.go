@@ -48,7 +48,7 @@ func AddToHandler(spanName string) Decorator {
 				rec := httptest.NewRecorder()
 				defer Finish(rw, req, rec)
 
-				rw, req = Start(rw, req, spanName)
+				rw, req, rec = Start(rw, req, rec, spanName)
 
 				f.ServeHTTP(rec, req)
 			}
@@ -112,6 +112,23 @@ func UpdateMNYHeaderRW(rw http.ResponseWriter, allMNY []*Money) http.ResponseWri
 	return rw
 }
 
+// Updates the Money Header values for a httptest.ResponseRecorder
+func UpdateMNYHeaderRec(rec *httptest.ResponseRecorder, allMNY []*Money) *httptest.ResponseRecorder {
+	header := DelAllMNYHeaders(rec.HeaderMap)
+	header = AddAllMNYHeaders(header, allMNY)
+	if mnyheader, ok := header[http.CanonicalHeaderKey(HEADER)]; ok {
+		for i := 0; i < len(mnyheader); i++ {
+			if i == 0 {
+				rec.HeaderMap.Set(HEADER, mnyheader[i])
+			} else {
+				rec.HeaderMap.Add(HEADER, mnyheader[i])
+			}
+		}
+	}
+
+	return rec
+}
+
 func copyOfMNY(MNYs []*Money) []Money {
 	var mnys []Money
 	for i := 0; i < len(MNYs); i++ {
@@ -147,16 +164,11 @@ func GetCurrentHeader(MNYs []*Money) Money {
 	return mnys[0]
 }
 
-// Start of the money trace process
-func Start(rw http.ResponseWriter, req *http.Request, spanName string) (http.ResponseWriter, *http.Request) {
+// Decorator start of the money trace process
+func Start(rw http.ResponseWriter, req *http.Request, rec *httptest.ResponseRecorder, spanName string) (http.ResponseWriter, *http.Request, *httptest.ResponseRecorder) {
 	var allMNY []*Money
-	for k, v := range req.Header {
-		if strings.EqualFold(k, HEADER) {
-			for i := range v {
-				allMNY = append(allMNY, StringToObject(v[i]))
-			}
-			break
-		}
+	for _, m := range req.Header[ http.CanonicalHeaderKey(HEADER) ] {
+		allMNY = append(allMNY, StringToObject(m))
 	}
 
 	pMNY := GetCurrentHeader(allMNY)
@@ -165,11 +177,12 @@ func Start(rw http.ResponseWriter, req *http.Request, spanName string) (http.Res
 
 	req = UpdateMNYHeaderReq(req, allMNY)
 	rw = UpdateMNYHeaderRW(rw, allMNY)
+	rec = UpdateMNYHeaderRec(rec, allMNY)
 
-	return rw, req
+	return rw, req, rec
 }
 
-// End of the money trace process
+// Decorator finish of the money trace process
 func Finish(rw http.ResponseWriter, req *http.Request, rec *httptest.ResponseRecorder) (http.ResponseWriter, *http.Request) {
 	for k, v := range rec.HeaderMap {
 		for i := range v {
@@ -182,13 +195,8 @@ func Finish(rw http.ResponseWriter, req *http.Request, rec *httptest.ResponseRec
 	}
 
 	var allMNY []*Money
-	for k, v := range rw.Header() {
-		if strings.EqualFold(k, HEADER) {
-			for i := range v {
-				allMNY = append(allMNY, StringToObject(v[i]))
-			}
-			break
-		}
+	for _, v := range rw.Header()[ http.CanonicalHeaderKey(HEADER) ] {
+		allMNY = append(allMNY, StringToObject(v))
 	}
 
 	mny := GetCurrentHeader(allMNY)
@@ -215,3 +223,77 @@ func Finish(rw http.ResponseWriter, req *http.Request, rec *httptest.ResponseRec
 
 	return rw, req
 }
+
+// Begin will obtain the money headers from the request,
+// Build a Money object array from those.
+// Create a new child money object and add it to the array.
+// return the Money array, and the new child Money object
+func Begin(req *http.Request, spanName string) ([]*Money, *Money) {
+	var allMNY []*Money
+	for _, m := range req.Header[ http.CanonicalHeaderKey(HEADER) ] {
+		allMNY = append(allMNY, StringToObject(m))
+	}
+
+	pMNY := GetCurrentHeader(allMNY)
+	cMNY := NewChild(pMNY.ToString(), spanName)
+	allMNY = append(allMNY, cMNY)
+
+	return allMNY, cMNY
+}
+
+// AddResponseMoney takes the additional money objects from the response then
+// adds them into the money object array
+func AddResponseMoney(allMNY []*Money, resp *http.Response) []*Money {
+	var respMNY []*Money
+	for _, m := range resp.Header[ http.CanonicalHeaderKey(HEADER) ] {
+		respMNY = append(respMNY, StringToObject(m))
+	}
+	
+	for _, rm := range respMNY {
+		found := false
+		
+		for _, am := range allMNY {
+			if rm.spanId == am.spanId {
+				found = true
+			}
+		}
+		
+		if !found {
+			allMNY = append(allMNY, rm)
+		}
+	}
+	
+	return allMNY
+}
+
+// End adds the results to the current/child span
+// returns a http.ResponseWriter with the updated Money array
+func End(rw http.ResponseWriter, allMNY []*Money, cMNY *Money, statusCode int, spanSuccess bool) http.ResponseWriter {
+	cMNY.AddResults(statusCode, spanSuccess)
+	
+	// update current mny object
+	for x := range allMNY {
+		if allMNY[x].spanId == cMNY.spanId {
+			allMNY[x] = cMNY
+			break
+		}
+	}
+	
+	rw = UpdateMNYHeaderRW(rw, allMNY)
+
+	return rw
+}
+
+
+/*
+AT BEGINING
+get the request money headers
+add a new money span (current)
+
+IN MIDDLE
+if any request is made sending money headers update money array with response money headers
+
+AT END
+addResults to current span
+update the responseWriter money header
+*/
