@@ -112,6 +112,32 @@ func UpdateMNYHeaderRW(rw http.ResponseWriter, allMNY []*Money) http.ResponseWri
 	return rw
 }
 
+// UpdateRWMoney adds any different values between the passed Money array and 
+// the http.ResponseWriter to the http.ResponseWriter
+func AddMoneyDiffToRW(mnys []*Money, rw http.ResponseWriter) http.ResponseWriter {
+	var rwMNY []*Money
+	for _, m := range rw.Header()[ http.CanonicalHeaderKey(HEADER) ] {
+		rwMNY = append(rwMNY, StringToObject(m))
+	}
+
+	for _, m := range mnys {
+		found := false
+		
+		for _, rm := range rwMNY {
+			if m.spanId == rm.spanId {
+				found = true
+				break
+			}
+		}
+		
+		if !found {
+			rw.Header().Add(HEADER, m.ToString())
+		}
+	}
+	
+	return rw
+}
+
 // Updates the Money Header values for a httptest.ResponseRecorder
 func UpdateMNYHeaderRec(rec *httptest.ResponseRecorder, allMNY []*Money) *httptest.ResponseRecorder {
 	header := DelAllMNYHeaders(rec.HeaderMap)
@@ -128,6 +154,64 @@ func UpdateMNYHeaderRec(rec *httptest.ResponseRecorder, allMNY []*Money) *httpte
 
 	return rec
 }
+
+// AddResponseMoney takes the additional money objects from the response then
+// adds them into the money object array
+func AddResponseDiffToMoney(resp *http.Response, allMNY []*Money) []*Money {
+	var respMNY []*Money
+	for _, m := range resp.Header[ http.CanonicalHeaderKey(HEADER) ] {
+		respMNY = append(respMNY, StringToObject(m))
+	}
+	
+	for _, rm := range respMNY {
+		found := false
+		
+		for _, am := range allMNY {
+			if rm.spanId == am.spanId {
+				found = true
+			}
+		}
+		
+		if !found {
+			allMNY = append(allMNY, rm)
+		}
+	}
+	
+	return allMNY
+}
+
+// AddResponseMoneyToRW take the different money values between a http.Response and 
+// http.ResponseWriter and applies those different values from the http.Response to the
+// http.ResponseWriter.
+func AddResponseDiffToRW(rw http.ResponseWriter, resp *http.Response) http.ResponseWriter {
+	var rwMNY []*Money
+	for _, m := range rw.Header()[ http.CanonicalHeaderKey(HEADER) ] {
+		rwMNY = append(rwMNY, StringToObject(m))
+	}
+	
+	var respMNY []*Money
+	for _, m := range resp.Header[ http.CanonicalHeaderKey(HEADER) ] {
+		respMNY = append(respMNY, StringToObject(m))
+	}
+	
+	for _, rp := range respMNY {
+		found := false
+		
+		for _, rw := range rwMNY {
+			if rw.spanId == rp.spanId {
+				found = true
+				break
+			}
+		}
+		
+		if !found {
+			rw.Header().Add(HEADER, rp.ToString())
+		}
+	}
+	
+	return rw
+}
+
 
 func copyOfMNY(MNYs []*Money) []Money {
 	var mnys []Money
@@ -239,31 +323,6 @@ func Begin(req *http.Request, spanName string) ([]*Money, *Money) {
 	allMNY = append(allMNY, cMNY)
 
 	return allMNY, cMNY
-}
-
-// AddResponseMoney takes the additional money objects from the response then
-// adds them into the money object array
-func AddResponseMoney(allMNY []*Money, resp *http.Response) []*Money {
-	var respMNY []*Money
-	for _, m := range resp.Header[ http.CanonicalHeaderKey(HEADER) ] {
-		respMNY = append(respMNY, StringToObject(m))
-	}
-	
-	for _, rm := range respMNY {
-		found := false
-		
-		for _, am := range allMNY {
-			if rm.spanId == am.spanId {
-				found = true
-			}
-		}
-		
-		if !found {
-			allMNY = append(allMNY, rm)
-		}
-	}
-	
-	return allMNY
 }
 
 // End adds the results to the current/child span

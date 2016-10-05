@@ -36,6 +36,8 @@ func init() {
 
 func TestShowme(t *testing.T) {
 	mny := new(Money)
+	mny.traceId = "showme test"
+	mny.spanName = "SHOWME-SPANNAME"
 	mny.showme()
 }
 

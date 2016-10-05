@@ -342,7 +342,7 @@ func TestBegin(t *testing.T) {
 	}
 }
 
-func TestAddResponseMoney(t *testing.T) {
+func TestAddResponseDiffToMoney(t *testing.T) {
 	m1, _ := getTestMoney()
 	mnys := getTestMoneyArray(m1)
 
@@ -370,7 +370,7 @@ func TestAddResponseMoney(t *testing.T) {
 			h1aMNY, h1cMNY := Begin(req, fsn1)
 			rp := makeTestMoneyRequest(h1aMNY, server2.URL, client2)
 			
-			h1aMNY = AddResponseMoney(h1aMNY, rp)
+			h1aMNY = AddResponseDiffToMoney(rp, h1aMNY)
 			
 			rw = End(rw, h1aMNY, h1cMNY, h1code, h1success)
 			rw.WriteHeader(h1code)
@@ -459,3 +459,143 @@ func TestEnd(t *testing.T) {
 	}
 }
 
+func TestAddMoneyDiffToRW(t *testing.T) {
+	m1, m2 := getTestMoney()
+	mnys := getTestMoneyArray(m1, m2)
+	
+	fsn1 := "FINISH-SPAN-NAME1"
+	fsn2 := "FINISH-SPAN-NAME2"
+	
+	h2code := 234
+	handler2 := Decorate(
+		http.HandlerFunc(
+			func(rw http.ResponseWriter, req *http.Request) {
+				rw.WriteHeader(h2code)
+				rw.Write([]byte(fsn2))
+			},
+		),
+	AddToHandler(fsn2))
+	
+	server2, client2 := makeTestServer(handler2)
+	defer server2.Close()
+	
+	var rwMNY []*Money
+	handler1 := Decorate(
+		http.HandlerFunc(
+			func(rw http.ResponseWriter, req *http.Request) {
+				var h1aMNY []*Money
+				for _, m := range req.Header[ http.CanonicalHeaderKey(HEADER) ] {
+					h1aMNY = append(h1aMNY, StringToObject(m))
+				}
+				
+				rp := makeTestMoneyRequest(h1aMNY, server2.URL, client2)
+				
+				var rpMNY []*Money
+				for _, m := range rp.Header[ http.CanonicalHeaderKey(HEADER) ] {
+					rpMNY = append(rpMNY, StringToObject(m))
+				}
+				rw = AddMoneyDiffToRW(rpMNY, rw)
+				for _, m := range rw.Header()[ http.CanonicalHeaderKey(HEADER) ] {
+					rwMNY = append(rwMNY, StringToObject(m))
+				}
+			},
+		),
+	AddToHandler(fsn1))
+	
+	server1, client1 := makeTestServer(handler1)
+	defer server1.Close()
+	
+	resp := makeTestMoneyRequest(mnys, server1.URL, client1)
+	defer resp.Body.Close()
+	
+	if len(rwMNY) != len(mnys)+2 {
+		t.Errorf("ResponseWriter money header was not the correct length. Expected: %d, Got: %d", len(mnys)+2, len(rwMNY))
+	}
+	
+	var fsn1Found bool
+	var fsn2Found bool
+	for _, m := range rwMNY {
+		if m.spanName == fsn1 {
+			fsn1Found = true
+		} else if m.spanName == fsn2 {
+			fsn2Found = true
+		}
+	}
+	
+	if !fsn1Found {
+		t.Errorf("Extra Response Money span (%s) was not found in Money object.", fsn1)
+	}
+	if !fsn2Found {
+		t.Errorf("Extra Response Money span (%s) was not found in Money object.", fsn2)
+	}
+}
+
+func TestRecursiveDepth(t *testing.T) {
+	m1, _ := getTestMoney()
+	mnys := getTestMoneyArray(m1)
+
+	fsn1 := "FINISH-SPAN-NAME1"
+	fsn2 := "FINISH-SPAN-NAME2"
+
+	h2code := 234
+	handler2 := Decorate(
+		http.HandlerFunc(
+			func(rw http.ResponseWriter, req *http.Request) {
+				rw.WriteHeader(h2code)
+				rw.Write([]byte(fsn2))
+			},
+		),
+	AddToHandler(fsn2))
+	
+	server2, client2 := makeTestServer(handler2)
+	defer server2.Close()
+	
+	h1code := 222
+	handler1 := Decorate(
+		http.HandlerFunc(
+			func(rw http.ResponseWriter, req *http.Request) {
+				var h1aMNY []*Money
+				for _, m := range req.Header[ http.CanonicalHeaderKey(HEADER) ] {
+					h1aMNY = append(h1aMNY, StringToObject(m))
+				}
+				
+				rp := makeTestMoneyRequest(h1aMNY, server2.URL, client2)
+				rw = AddResponseDiffToRW(rw, rp)
+				
+				rw.WriteHeader(h1code)
+				rw.Write([]byte(fsn1))
+			},
+		),
+	AddToHandler(fsn1))
+	
+	server1, client1 := makeTestServer(handler1)
+	defer server1.Close()
+	
+	resp := makeTestMoneyRequest(mnys, server1.URL, client1)
+	defer resp.Body.Close()
+
+	count := 0
+	fsn1Money := ""
+	fsn2Money := ""
+	for _, v := range resp.Header[ http.CanonicalHeaderKey(HEADER) ] {
+		if strings.Contains(v, fsn1) {
+			fsn1Money = v
+		} else if strings.Contains(v, fsn2) {
+			fsn2Money = v
+		}
+		
+		count++
+	}
+
+	if count != len(mnys) + 2 {
+		t.Errorf("Expected Money header count not correct, Got: %v, Expected: %v", count, len(mnys)+2)
+	}
+	
+	if fsn2Money == "" {
+		t.Errorf("Money header was not found when finished. %v", fsn2)
+	}
+	
+	if fsn1Money == "" {
+		t.Errorf("Money header was not found when finished. %v", fsn1)
+	}
+}
