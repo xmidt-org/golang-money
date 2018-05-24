@@ -38,11 +38,13 @@ func MainSpan(appName string) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
+
 				rw := &RWInterceptor{ResponseWriter: w, Code: http.StatusOK, Body: new(bytes.Buffer)}
+				defer rw.Flush()
 
 				if r.Header.Get(MoneyHeader) != "" {
 					var (
-						tc  *traceContext
+						tc  *TraceContext
 						err error
 					)
 
@@ -61,9 +63,6 @@ func MainSpan(appName string) func(http.Handler) http.Handler {
 								TC:      tc,
 							})
 
-							//flush temporary responseWriter buffer
-							//into the original one
-							rw.Flush()
 						}()
 					}
 				}
@@ -73,7 +72,8 @@ func MainSpan(appName string) func(http.Handler) http.Handler {
 	}
 }
 
-//RWInterceptor allows money trace spans to be int
+//RWInterceptor allows temporary buffering of
+//body and code for an original responseWriter
 type RWInterceptor struct {
 	http.ResponseWriter
 	Code int

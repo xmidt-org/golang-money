@@ -29,7 +29,7 @@ type span struct {
 	//the user gives us these values
 	Name    string
 	AppName string
-	TC      *traceContext
+	TC      *TraceContext
 	Success bool
 	Code    int
 
@@ -48,7 +48,7 @@ type SpanReport struct {
 	AppName string
 
 	//money trace context for this span
-	TC *traceContext
+	TC *TraceContext
 
 	//whether or not this span is defined as "successful"
 	Success bool
