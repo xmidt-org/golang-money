@@ -58,6 +58,7 @@ func MainSpan(appName string) func(http.Handler) http.Handler {
 								AppName: appName,
 								Code:    rw.Code,
 								Success: rw.Code < 400,
+								TC:      tc,
 							})
 
 							//flush temporary responseWriter buffer
