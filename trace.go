@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"net/http"
 	"strconv"
 	"strings"
 )
@@ -15,8 +14,11 @@ import (
 type contextKey int
 
 const (
-	//ContextKeyMoneyTrace is used to put/get the MoneyTrace header value to/from contexts
-	ContextKeyMoneyTrace contextKey = iota
+	//ContextKeyMoneyTraceHeader is the key to the money trace header value that needs to be passed in any outgoing request
+	ContextKeyMoneyTraceHeader contextKey = iota
+
+	//ContextKeyChildMoneyTrace is the key to the money trace object needed to start sub-spans
+	ContextKeyChildMoneyTrace
 )
 
 type traceContext struct {
@@ -75,10 +77,10 @@ func decodeTraceContext(raw string) (tc *traceContext, err error) {
 }
 
 func encodeTraceContext(tc *traceContext) string {
-	return fmt.Sprintf("%s=%v;%s=%v;s=%v", pIDKey, tc.PID, sIDKey, tc.SID, tIDKey, tc.TID)
+	return fmt.Sprintf("%s=%v;%s=%v;%s=%v", pIDKey, tc.PID, sIDKey, tc.SID, tIDKey, tc.TID)
 }
 
-func next(current *traceContext) *traceContext {
+func subTrace(current *traceContext) *traceContext {
 	return &traceContext{
 		PID: current.SID,
 		SID: newSID(),
@@ -86,10 +88,11 @@ func next(current *traceContext) *traceContext {
 	}
 }
 
-//injectTraceContext places the given
-func injectContext(moneyTraceHeaderVal string, r *http.Request) {
-	var ctx = context.WithValue(r.Context(), ContextKeyMoneyTrace, moneyTraceHeaderVal)
-	r.WithContext(ctx)
+//traceContext returns a context with money trace context values
+func traceCxt(tc *traceContext) (ctx context.Context) {
+	ctx = context.WithValue(context.Background(), ContextKeyChildMoneyTrace, subTrace(tc))
+	ctx = context.WithValue(ctx, ContextKeyMoneyTraceHeader, encodeTraceContext(tc))
+	return
 }
 
 //newSID returns a random int64 between 0 and maxint64

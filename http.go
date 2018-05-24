@@ -32,13 +32,9 @@ const (
 	sIDKey = "span-id"
 )
 
-//HandlerOptions contains money span parameters
-type HandlerOptions struct {
-	SpanName string
-}
-
 //MainSpan is a handy way to decorate your handler with money capabilities
-func MainSpan(o *HandlerOptions) func(http.Handler) http.Handler {
+//TODO: need to explain about how to use the money trace context values in in the request context
+func MainSpan(appName string) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
@@ -51,12 +47,22 @@ func MainSpan(o *HandlerOptions) func(http.Handler) http.Handler {
 					)
 
 					if tc, err = decodeTraceContext(r.Header.Get(MoneyHeader)); err == nil {
-						injectContext(encodeTraceContext(next(tc)), r)
-						var done = Start(o, w, r)
+						r = r.WithContext(traceCxt(tc))
+
+						var done = Start(rw.Header())
 
 						defer func() {
+							//finish this main handler span
+							done(&SpanReport{
+								Name:    "HTTPHandler",
+								AppName: appName,
+								Code:    rw.Code,
+								Success: rw.Code < 400,
+							})
+
+							//flush temporary responseWriter buffer
+							//into the original one
 							rw.Flush()
-							done()
 						}()
 					}
 				}
