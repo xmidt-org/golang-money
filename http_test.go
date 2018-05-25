@@ -50,3 +50,21 @@ func TestRWInterceptor(t *testing.T) {
 		t.Errorf("expected '500' but got '%v'", w.Code)
 	}
 }
+
+func TestForwardMoneySpanHeaders(t *testing.T) {
+	input := http.Header{
+		MoneySpansHeader: []string{"v0", "v1"},
+		"Ignored":        []string{"should be ignored"},
+	}
+
+	var target = http.Header{}
+
+	ForwardMoneySpanHeaders(input, target)
+	if len(target[MoneySpansHeader]) != 2 {
+		t.Error("expecting target to have 2 headers")
+	}
+
+	if len(target["Ignore"]) > 0 {
+		t.Error("Header 'Ignored' should have be copied")
+	}
+}

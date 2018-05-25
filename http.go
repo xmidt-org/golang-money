@@ -73,6 +73,19 @@ func MainSpan(appName string) func(http.Handler) http.Handler {
 	}
 }
 
+//ForwardMoneySpanHeaders copies all money span headers from an input header to a target
+//This is useful to pass money span headers received from remote systems to your system's
+//response writer headers
+func ForwardMoneySpanHeaders(from http.Header, to http.Header) {
+	for k, vs := range from {
+		if k == MoneySpansHeader {
+			for _, v := range vs {
+				to.Add(k, v)
+			}
+		}
+	}
+}
+
 //rwInterceptor allows temporary buffering of
 //body and code for an original responseWriter
 type rwInterceptor struct {
