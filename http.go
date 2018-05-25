@@ -32,10 +32,12 @@ const (
 	sIDKey = "span-id"
 )
 
-//MainSpan is a handy way to decorate your handler with money capabilities
-//TODO: need to explain about how to use the money trace context values in in the request context
-//TODO: disclaimer that this decorator changes the behavior of the responseWriter by allowing multiply
-//body and code writes
+//MainSpan is the way to decorate your handler with money capabilities
+//It also places money trace context information in the incoming request's contexts
+//This is done so you can pass such trace context information to subsequent systems using money as well.
+//Important: this decorator changes the behavior of the incoming responseWriter into the handler
+//by allowing multiple body and code writes and keeping only the last writes. This allows the decorator
+//to send back money span headers
 func MainSpan(appName string) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(
