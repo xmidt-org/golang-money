@@ -55,17 +55,14 @@ func MainSpan(appName string) func(http.Handler) http.Handler {
 
 						var done = Start(rw.Header())
 
-						defer func() {
-							//finish this main handler span
-							done(&SpanReport{
-								Name:    "HTTPHandler",
-								AppName: appName,
-								Code:    rw.Code,
-								Success: rw.Code < 400,
-								TC:      tc,
-							})
-
-						}()
+						//finish this main handler span
+						defer done(&SpanReport{
+							Name:    "HTTPHandler",
+							AppName: appName,
+							Code:    rw.Code,
+							Success: rw.Code < 400,
+							TC:      tc,
+						})
 					}
 				}
 
