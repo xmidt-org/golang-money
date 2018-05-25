@@ -73,7 +73,7 @@ func Start(h http.Header) func(*SpanReport) {
 			Duration:  time.Since(start),
 		}
 
-		h.Add(moneySpansHeader, span.String())
+		h.Add(MoneySpansHeader, span.String())
 	}
 }
 

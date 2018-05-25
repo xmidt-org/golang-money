@@ -24,7 +24,7 @@ import (
 //Header keys
 const (
 	MoneyHeader      = "X-Money-Trace"
-	moneySpansHeader = "X-Money-Spans"
+	MoneySpansHeader = "X-Money-Spans"
 
 	//money-trace context keys
 	tIDKey = "trace-id"
@@ -34,12 +34,14 @@ const (
 
 //MainSpan is a handy way to decorate your handler with money capabilities
 //TODO: need to explain about how to use the money trace context values in in the request context
+//TODO: disclaimer that this decorator changes the behavior of the responseWriter by allowing multiply
+//body and code writes
 func MainSpan(appName string) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 
-				rw := &RWInterceptor{ResponseWriter: w, Code: http.StatusOK, Body: new(bytes.Buffer)}
+				rw := &rwInterceptor{ResponseWriter: w, Code: http.StatusOK, Body: new(bytes.Buffer)}
 				defer rw.Flush()
 
 				if r.Header.Get(MoneyHeader) != "" {
@@ -72,9 +74,9 @@ func MainSpan(appName string) func(http.Handler) http.Handler {
 	}
 }
 
-//RWInterceptor allows temporary buffering of
+//rwInterceptor allows temporary buffering of
 //body and code for an original responseWriter
-type RWInterceptor struct {
+type rwInterceptor struct {
 	http.ResponseWriter
 	Code int
 	Body *bytes.Buffer
@@ -82,18 +84,19 @@ type RWInterceptor struct {
 
 //Write simply saves the last array of bytes written. Such data
 //is then written to the original responseWriter once Flush() is called
-func (rw *RWInterceptor) Write(b []byte) (int, error) {
+func (rw *rwInterceptor) Write(b []byte) (int, error) {
+	rw.Body.Reset() //starting fresh
 	return rw.Body.Write(b)
 }
 
 //WriteHeader saves the last code written to the it. Such code
 //is then written to the original responseWriter once Flush() is called
-func (rw *RWInterceptor) WriteHeader(code int) {
+func (rw *rwInterceptor) WriteHeader(code int) {
 	rw.Code = code
 }
 
 //Flush transfers the temporary buffer data into the original responseWriter
-func (rw *RWInterceptor) Flush() (int, error) {
+func (rw *rwInterceptor) Flush() (int, error) {
 	rw.ResponseWriter.WriteHeader(rw.Code)
 	return rw.ResponseWriter.Write(rw.Body.Bytes())
 }

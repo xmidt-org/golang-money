@@ -62,3 +62,23 @@ func TestEncodeTraceContext(t *testing.T) {
 		t.Errorf("Expected %v but got %v", expected, actual)
 	}
 }
+
+func TestSubtrace(t *testing.T) {
+	current := &TraceContext{
+		TID: "123",
+		SID: 1,
+	}
+	st := SubTrace(current)
+
+	if st.PID != current.SID {
+		t.Errorf("Expected pid to be %v but got %v", current.PID, st.PID)
+	}
+
+	if st.SID == 0 {
+		t.Error("Expected sid to be defined")
+	}
+
+	if st.TID != current.TID {
+		t.Errorf("Expected tid to be %v but got %v", current.TID, st.TID)
+	}
+}

@@ -40,6 +40,7 @@ type TraceContext struct {
 //decodeTraceContext returns a TraceContext from the given value "raw"
 //raw is typically taken directly from http.Request headers
 //for now, it is overly strict with the expected format
+//TODO: could we use regex here instead for simplicity?
 func decodeTraceContext(raw string) (tc *TraceContext, err error) {
 	tc = new(TraceContext)
 
@@ -94,7 +95,7 @@ func EncodeTraceContext(tc *TraceContext) string {
 	return fmt.Sprintf("%s=%v;%s=%v;%s=%v", pIDKey, tc.PID, sIDKey, tc.SID, tIDKey, tc.TID)
 }
 
-//Subtrace creates a child trace context for current
+//SubTrace creates a child trace context for current
 func SubTrace(current *TraceContext) *TraceContext {
 	rand.Seed(time.Now().Unix())
 	return &TraceContext{
