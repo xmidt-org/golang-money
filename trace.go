@@ -84,9 +84,6 @@ func decodeTraceContext(raw string) (tc *TraceContext, err error) {
 		}
 	}
 
-	if tc.PID == 0 || tc.SID == 0 || tc.TID == "" {
-		tc, err = nil, errBadTrace
-	}
 	return
 }
 

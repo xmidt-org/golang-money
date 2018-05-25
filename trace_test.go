@@ -43,8 +43,8 @@ func TestDecodeTraceContext(t *testing.T) {
 		},
 
 		{
-			name: "empty",
-			i:    "",
+			name: "NoRealPairs",
+			i:    "one=1;two=2;three=3",
 			o:    nil,
 			e:    errBadTrace,
 		},
