@@ -68,14 +68,14 @@ func decodeTraceContext(raw string) (tc *TraceContext, err error) {
 		case k == sIDKey && !seen[k]:
 			var pv int64
 			if pv, err = strconv.ParseInt(v, 10, 64); err != nil {
-				return
+				return nil, err
 			}
 
 			tc.SID, seen[k] = pv, true
 		case k == pIDKey && !seen[k]:
 			var pv int64
 			if pv, err = strconv.ParseInt(v, 10, 64); err != nil {
-				return
+				return nil, err
 			}
 			tc.PID, seen[k] = pv, true
 
@@ -83,6 +83,7 @@ func decodeTraceContext(raw string) (tc *TraceContext, err error) {
 			return nil, errBadTrace
 		}
 	}
+
 	if tc.PID == 0 || tc.SID == 0 || tc.TID == "" {
 		tc, err = nil, errBadTrace
 	}

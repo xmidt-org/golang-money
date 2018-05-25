@@ -1,6 +1,7 @@
 package money
 
 import (
+	"context"
 	"reflect"
 	"testing"
 )
@@ -18,7 +19,8 @@ func TestDecodeTraceContext(t *testing.T) {
 			e: errPairsCount,
 		},
 		{
-			i: "trace-id=de305d54-75b4-431b-adb2-eb6b9e546013;parent-id=3285573610483682037;span-id=3285573610483682037",
+			name: "ideal",
+			i:    "trace-id=de305d54-75b4-431b-adb2-eb6b9e546013;parent-id=3285573610483682037;span-id=3285573610483682037",
 			o: &TraceContext{
 				PID: 3285573610483682037,
 				SID: 3285573610483682037,
@@ -28,14 +30,23 @@ func TestDecodeTraceContext(t *testing.T) {
 		},
 
 		{
-			i: "parent-id=1;parent-id=3285573610483682037;span-id=3285573610483682037",
-			o: nil,
-			e: errBadTrace,
+			name: "duplicateEntries",
+			i:    "parent-id=1;parent-id=3285573610483682037;span-id=3285573610483682037",
+			o:    nil,
+			e:    errBadTrace,
 		},
 		{
-			i: "parent-id=de305d54-75b=4-431b-adb2-eb6b9e546013;parent-id=3285573610483682037;span-id=3285573610483682037",
-			o: nil,
-			e: errBadPair,
+			name: "badPair",
+			i:    "parent-id=de305d54-75b=4-431b-adb2-eb6b9e546013;parent-id=3285573610483682037;span-id=3285573610483682037",
+			o:    nil,
+			e:    errBadPair,
+		},
+
+		{
+			name: "empty",
+			i:    "",
+			o:    nil,
+			e:    errBadTrace,
 		},
 	}
 
@@ -48,6 +59,26 @@ func TestDecodeTraceContext(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDecodeTraceContextOtherCases(t *testing.T) {
+	t.Run("NonIntSID", func(t *testing.T) {
+		i := "trace-id=de305d54-75b4-431b-adb2-eb6b9e546013;parent-id=3285573610483682037;span-id=NaN"
+		tc, e := decodeTraceContext(i)
+
+		if tc != nil || e == nil {
+			t.Errorf("expected tc to be nil and error to be non-nil but got '%v' and '%v'", tc, e)
+		}
+	})
+
+	t.Run("NonIntPID", func(t *testing.T) {
+		i := "trace-id=de305d54-75b4-431b-adb2-eb6b9e546013;parent-id=NaN;span-id=123"
+		tc, e := decodeTraceContext(i)
+
+		if tc != nil || e == nil {
+			t.Errorf("expected tc to be nil and error to be non-nil but got '%v' and '%v'", tc, e)
+		}
+	})
 }
 
 func TestEncodeTraceContext(t *testing.T) {
@@ -80,5 +111,79 @@ func TestSubtrace(t *testing.T) {
 
 	if st.TID != current.TID {
 		t.Errorf("Expected tid to be %v but got %v", current.TID, st.TID)
+	}
+}
+
+func TestPassThroughContext(t *testing.T) {
+
+	tests := []struct {
+		name string
+		in   context.Context
+		eVal string
+		eOk  bool
+	}{
+		{
+			name: "noValue",
+			in:   context.TODO(),
+			eVal: "",
+			eOk:  false,
+		},
+
+		{
+			name: "ideal",
+			in:   context.WithValue(context.Background(), contextKeyMoneyTraceHeader, "testVal"),
+			eVal: "testVal",
+			eOk:  true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			aVal, aOk := PassThroughTraceContext(test.in)
+
+			if aVal != test.eVal || aOk != test.eOk {
+				t.Errorf("expected '%s' and '%v' but got '%s' and '%v'", test.eVal, test.eOk, aVal, aOk)
+			}
+		})
+	}
+}
+
+func TestMainSpanChildContext(t *testing.T) {
+
+	testTraceCtx := &TraceContext{
+		TID: "test-trace",
+		SID: 123,
+		PID: 123,
+	}
+
+	tests := []struct {
+		name string
+		in   context.Context
+		eVal *TraceContext
+		eOk  bool
+	}{
+		{
+			name: "noValue",
+			in:   context.TODO(),
+			eVal: nil,
+			eOk:  false,
+		},
+
+		{
+			name: "ideal",
+			in:   context.WithValue(context.Background(), contextKeyChildMoneyTrace, testTraceCtx),
+			eVal: testTraceCtx,
+			eOk:  true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			aVal, aOk := MainSpanChildContext(test.in)
+
+			if aOk != test.eOk || !reflect.DeepEqual(aVal, test.eVal) {
+				t.Errorf("expected '%v' and '%v' but got '%v' and '%v'", test.eVal, test.eOk, aVal, aOk)
+			}
+		})
 	}
 }

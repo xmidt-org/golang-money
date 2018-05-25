@@ -25,6 +25,7 @@ import (
 	"time"
 )
 
+//https://github.com/Comcast/money/wiki#what-is-captured
 type span struct {
 	//the user gives us these values
 	Name    string
@@ -39,7 +40,7 @@ type span struct {
 	Host      string
 }
 
-//SpanReport contains money trace parameters used for reporting back on spans
+//SpanReport contains parameters used for reporting back on spans
 type SpanReport struct {
 	//Name of the Span (i.e HTTPHandler)
 	Name string
@@ -63,6 +64,8 @@ func Start(h http.Header) func(*SpanReport) {
 	var start = time.Now()
 
 	return func(sr *SpanReport) {
+		var hostname, _ = os.Hostname()
+
 		var span = span{
 			Name:      sr.Name,
 			AppName:   sr.AppName,
@@ -71,34 +74,33 @@ func Start(h http.Header) func(*SpanReport) {
 			Code:      sr.Code,
 			StartTime: start,
 			Duration:  time.Since(start),
+			Host:      hostname,
 		}
 
 		h.Add(MoneySpansHeader, span.String())
 	}
 }
 
-//String() returns the string representation of the current span
-//TODO:
-//-revise to see if better approach could be taken: maybe through field tags
-//-does this align with the documentation?
+//String() returns the string representation of the span
 func (s *span) String() string {
 	var o = new(bytes.Buffer)
 
 	o.WriteString("span-name=" + s.Name)
-	o.WriteString(";span-duration=" + strconv.FormatInt(int64(s.Duration), 10))
+	o.WriteString(";span-duration=" + strconv.FormatInt(s.Duration.Nanoseconds()/1e3, 10)) //span duration in microseconds
 	o.WriteString(";span-success=" + strconv.FormatBool(s.Success))
 
 	o.WriteString(";span-id=" + strconv.FormatInt(int64(s.TC.SID), 10))
 	o.WriteString(";trace-id=" + s.TC.TID)
 	o.WriteString(";parent-id=" + strconv.FormatInt(int64(s.TC.PID), 10))
-	o.WriteString(";start-time=" + s.StartTime.Format(time.RFC3339Nano))
+
+	o.WriteString(fmt.Sprintf(";start-time=%v", s.StartTime.UTC().UnixNano()/1e3)) //UTC time since epoch in microseconds
+
+	if s.Host != "" {
+		o.WriteString(";host=" + s.Host)
+	}
 
 	if s.Code != 0 {
 		o.WriteString(fmt.Sprintf(";http-response-code=%v", s.Code))
-	}
-
-	if hostname, err := os.Hostname(); err == nil {
-		o.WriteString(";host=" + hostname)
 	}
 
 	return o.String()
