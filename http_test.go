@@ -38,15 +38,15 @@ func TestRWInterceptor(t *testing.T) {
 
 	rw.Flush() //need to flush for buffers to be copied
 
-	if w.Header().Get("header-test") != "test" {
-		t.Error()
+	if v := w.Header().Get("header-test"); v != "test" {
+		t.Errorf("expected header value for key 'header-test' to be 'test' but got '%v'", v)
 	}
 
-	if w.Body.String() != "body2" {
-		t.Error()
+	if b := w.Body.String(); b != "body2" {
+		t.Errorf("expected body to be 'body' but got '%v'", b)
 	}
 
 	if w.Code != 500 {
-		t.Error()
+		t.Errorf("expected '500' but got '%v'", w.Code)
 	}
 }
