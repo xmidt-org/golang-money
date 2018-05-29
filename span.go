@@ -86,6 +86,7 @@ func (s *span) String() string {
 	var o = new(bytes.Buffer)
 
 	o.WriteString("span-name=" + s.Name)
+	o.WriteString(";app-name=" + s.AppName)
 	o.WriteString(";span-duration=" + strconv.FormatInt(s.Duration.Nanoseconds()/1e3, 10)) //span duration in microseconds
 	o.WriteString(";span-success=" + strconv.FormatBool(s.Success))
 

@@ -21,6 +21,19 @@ func TestMainSpan(t *testing.T) {
 	}
 }
 
+func TestMainSpanNoMoney(t *testing.T) {
+	var handler = http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {})
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "http://localhost", nil)
+
+	MainSpan("testing")(handler).ServeHTTP(w, r)
+
+	if l := len(w.Header()[MoneySpansHeader]); l != 0 {
+		t.Errorf("expected no money headers but got %v", l)
+	}
+}
+
 func TestRWInterceptor(t *testing.T) {
 	var w = httptest.NewRecorder()
 

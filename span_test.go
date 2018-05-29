@@ -50,7 +50,7 @@ func TestSpanString(t *testing.T) {
 		Host:      "localhost",
 	}
 
-	var expected = "span-name=test-span;span-duration=1000000;span-success=true;span-id=1;trace-id=test-trace;parent-id=1;start-time=1000000;host=localhost;http-response-code=200"
+	var expected = "span-name=test-span;app-name=test-app;span-duration=1000000;span-success=true;span-id=1;trace-id=test-trace;parent-id=1;start-time=1000000;host=localhost;http-response-code=200"
 
 	if i.String() != expected {
 		t.Errorf("expected '%s' but got '%s", expected, i.String())

@@ -42,33 +42,31 @@ func MainSpan(appName string) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
-
 				rw := &rwInterceptor{ResponseWriter: w, Code: http.StatusOK, Body: new(bytes.Buffer)}
 				defer rw.Flush()
 
-				if r.Header.Get(MoneyHeader) != "" {
-					var (
-						tc  *TraceContext
-						err error
-					)
+				var (
+					tc  *TraceContext
+					err error
+				)
 
-					if tc, err = decodeTraceContext(r.Header.Get(MoneyHeader)); err == nil {
-						r = r.WithContext(traceCxt(tc))
+				if tc, err = decodeTraceContext(r.Header.Get(MoneyHeader)); err == nil {
+					var done = Start(rw.Header())
 
-						var done = Start(rw.Header())
+					h.ServeHTTP(rw, r.WithContext(traceCxt(tc)))
 
-						//finish this main handler span
-						defer done(&SpanReport{
-							Name:    "HTTPHandler",
-							AppName: appName,
-							Code:    rw.Code,
-							Success: rw.Code < 400,
-							TC:      tc,
-						})
-					}
+					//finish this main handler span
+					done(&SpanReport{
+						Name:    "HTTPHandler",
+						AppName: appName,
+						Code:    rw.Code,
+						Success: rw.Code < 400,
+						TC:      tc,
+					})
+
+				} else {
+					h.ServeHTTP(rw, r)
 				}
-
-				h.ServeHTTP(rw, r)
 			})
 	}
 }
