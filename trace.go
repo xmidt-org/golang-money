@@ -1,24 +1,12 @@
 package money
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
 	"strings"
 	"time"
-)
-
-type contextKey int
-
-const (
-	//contextKeyMoneyTraceHeader is the key to the money trace header value that needs to be passed in outgoing requests
-	//to systems configured with
-	contextKeyMoneyTraceHeader contextKey = iota
-
-	//contextKeyChildMoneyTrace is the key to the money trace object needed to start sub-spans
-	contextKeyChildMoneyTrace
 )
 
 //Trace Context decoding errors
@@ -101,25 +89,4 @@ func SubTrace(current *TraceContext) *TraceContext {
 		SID: rand.Int63(),
 		TID: current.TID,
 	}
-}
-
-//PassThroughTraceContext extracts (if any) the money trace context from the MainHandler span
-//Such value is placed in outgoing request header values
-func PassThroughTraceContext(ctx context.Context) (headerValue string, ok bool) {
-	headerValue, ok = ctx.Value(contextKeyMoneyTraceHeader).(string)
-	return
-}
-
-//MainSpanChildContext returns the money trace context object you should use to create any spans directly
-//under the MainHandler span
-func MainSpanChildContext(ctx context.Context) (tc *TraceContext, ok bool) {
-	tc, ok = ctx.Value(contextKeyChildMoneyTrace).(*TraceContext)
-	return
-}
-
-//traceCtxt returns a context with money trace context values
-func traceCxt(tc *TraceContext) (ctx context.Context) {
-	ctx = context.WithValue(context.Background(), contextKeyChildMoneyTrace, SubTrace(tc))
-	ctx = context.WithValue(ctx, contextKeyMoneyTraceHeader, EncodeTraceContext(tc))
-	return
 }

@@ -19,20 +19,21 @@ package money
 import (
 	"bytes"
 	"fmt"
-	"net/http"
-	"os"
 	"strconv"
 	"time"
 )
 
-//https://github.com/Comcast/money/wiki#what-is-captured
-type span struct {
+//Span models all the data related to a Span
+//It is a superset to what is specified in the
+//spec: https://github.com/Comcast/money/wiki#what-is-captured
+type Span struct {
 	//the user gives us these values
 	Name    string
 	AppName string
 	TC      *TraceContext
 	Success bool
 	Code    int
+	Err     error
 
 	//we deduce these values
 	StartTime time.Time
@@ -40,49 +41,30 @@ type span struct {
 	Host      string
 }
 
-//SpanReport contains parameters used for reporting back on spans
-type SpanReport struct {
+// Result models the result fields of a span.  The zero value of this struct
+// indicates a successful span execution.
+type Result struct {
 	//Name of the Span (i.e HTTPHandler)
 	Name string
 
 	//Name of the application/service running the Span (i.e. Scytale in XMiDT)
 	AppName string
 
-	//money trace context for this span
-	TC *TraceContext
-
 	//whether or not this span is defined as "successful"
 	Success bool
 
-	//Optional: status code for the operation (i.e 200 for an HTTP)
+	// Code is an abstract value which is up to the span code to supply.
+	// It is not necessary to enforce that this is an HTTP status code.
+	// The translation into an HTTP status code should take place elsewhere.
 	Code int
-}
 
-//Start begins the life of a span
-//returns a func whose calling represents the end of the span
-func Start(h http.Header) func(*SpanReport) {
-	var start = time.Now()
-
-	return func(sr *SpanReport) {
-		var hostname, _ = os.Hostname()
-
-		var span = span{
-			Name:      sr.Name,
-			AppName:   sr.AppName,
-			TC:        sr.TC,
-			Success:   sr.Success,
-			Code:      sr.Code,
-			StartTime: start,
-			Duration:  time.Since(start),
-			Host:      hostname,
-		}
-
-		h.Add(MoneySpansHeader, span.String())
-	}
+	// Err is just the error reported by the span
+	Err error
 }
 
 //String() returns the string representation of the span
-func (s *span) String() string {
+//TODO: update with new variables added to Span like err
+func (s *Span) String() string {
 	var o = new(bytes.Buffer)
 
 	o.WriteString("span-name=" + s.Name)
