@@ -1,7 +1,6 @@
 package money
 
 import (
-	"context"
 	"reflect"
 	"testing"
 )
@@ -111,79 +110,5 @@ func TestSubtrace(t *testing.T) {
 
 	if st.TID != current.TID {
 		t.Errorf("Expected tid to be %v but got %v", current.TID, st.TID)
-	}
-}
-
-func TestPassThroughContext(t *testing.T) {
-
-	tests := []struct {
-		name string
-		in   context.Context
-		eVal string
-		eOk  bool
-	}{
-		{
-			name: "noValue",
-			in:   context.TODO(),
-			eVal: "",
-			eOk:  false,
-		},
-
-		{
-			name: "ideal",
-			in:   context.WithValue(context.Background(), contextKeyMoneyTraceHeader, "testVal"),
-			eVal: "testVal",
-			eOk:  true,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			aVal, aOk := PassThroughTraceContext(test.in)
-
-			if aVal != test.eVal || aOk != test.eOk {
-				t.Errorf("expected '%s' and '%v' but got '%s' and '%v'", test.eVal, test.eOk, aVal, aOk)
-			}
-		})
-	}
-}
-
-func TestMainSpanChildContext(t *testing.T) {
-
-	testTraceCtx := &TraceContext{
-		TID: "test-trace",
-		SID: 123,
-		PID: 123,
-	}
-
-	tests := []struct {
-		name string
-		in   context.Context
-		eVal *TraceContext
-		eOk  bool
-	}{
-		{
-			name: "noValue",
-			in:   context.TODO(),
-			eVal: nil,
-			eOk:  false,
-		},
-
-		{
-			name: "ideal",
-			in:   context.WithValue(context.Background(), contextKeyChildMoneyTrace, testTraceCtx),
-			eVal: testTraceCtx,
-			eOk:  true,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			aVal, aOk := MainSpanChildContext(test.in)
-
-			if aOk != test.eOk || !reflect.DeepEqual(aVal, test.eVal) {
-				t.Errorf("expected '%v' and '%v' but got '%v' and '%v'", test.eVal, test.eOk, aVal, aOk)
-			}
-		})
 	}
 }

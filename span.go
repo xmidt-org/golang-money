@@ -82,12 +82,15 @@ func (s *Span) String() string {
 		o.WriteString(";host=" + s.Host)
 	}
 
+	//TODO: in the Result struct used to fill Spans, we say it's ok for s.Code not to be an HTTP status code
+	//but according to the specs, the code we return as string is assumed to be of such kind
+	//let's avoid contradictions here
 	if s.Code != 0 {
 		o.WriteString(fmt.Sprintf(";http-response-code=%v", s.Code))
 	}
 
 	if s.Err != nil {
-		o.WriteString(fmt.Sprintf(";err=%v", s.Code))
+		o.WriteString(fmt.Sprintf(";err=%v", s.Err))
 	}
 
 	return o.String()
