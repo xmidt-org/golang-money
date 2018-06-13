@@ -31,6 +31,9 @@ type Tracker interface {
 
 	// Finish concludes this span with the given result
 	Finish(Result)
+
+	// String provides the representation of the managed span
+	String() string
 }
 
 //HTTPTracker is the management type for child spans
@@ -39,12 +42,17 @@ type HTTPTracker struct {
 	span Span
 }
 
+//Start defines the money trace context for span s based
+//on the underlying HTTPTracker span before delegating the
+//start process to the Spanner
 func (t *HTTPTracker) Start(ctx context.Context, s Span) Tracker {
-	s.TC = SubTrace(t.span.TC) // s is a child span to t.span
+	s.TC = SubTrace(t.span.TC)
 
 	return t.Spanner.Start(ctx, s)
 }
 
+//Finish marks the end of the underlying HTTPTracker span
+//TODO: define what happens when this is called more than once
 func (t *HTTPTracker) Finish(r Result) {
 	t.span.Duration = time.Since(t.span.StartTime)
 	t.span.Host, _ = os.Hostname()
@@ -55,12 +63,13 @@ func (t *HTTPTracker) Finish(r Result) {
 	t.span.Success = r.Success
 }
 
-//Span returns the span associated with this
-//tracker. This is useful to get the trace context from it
-func (t *HTTPTracker) Span() Span {
-	return t.span
+//String returns the string representation of the span associated with this
+//HTTPTrackertracker
+func (t *HTTPTracker) String() string {
+	return t.span.String()
 }
 
+//TrackerFromContext extracts a tracker contained in the given context, if any
 func TrackerFromContext(ctx context.Context) (t Tracker, ok bool) {
 	t, ok = ctx.Value(contextKeyTracker).(Tracker)
 	return

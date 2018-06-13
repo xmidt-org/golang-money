@@ -13,7 +13,7 @@ type Spanner interface {
 }
 
 //SpanDecoder decodes an X-Money span off a request
-type SpanDecoder func(*http.Request) Span
+type SpanDecoder func(*http.Request) (Span, error)
 
 // HTTPSpanner implements Spanner and is the root factory
 // for HTTP spans
@@ -33,6 +33,8 @@ func (hs *HTTPSpanner) Start(ctx context.Context, s Span) Tracker {
 	}
 }
 
+//Decorate provides an Alice-style decorator for handlers
+//that wish to use money
 func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 	if hs == nil {
 		// allow DI of nil values to shut off money trace
@@ -40,28 +42,30 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 	}
 
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		//TODO: for now, we assume the incoming request has money trace context
-		span := hs.sd(request)
+		if span, err := hs.sd(request); err == nil {
+			tracker := hs.Start(request.Context(), span)
 
-		tracker := hs.Start(request.Context(), span)
+			ctx := context.WithValue(request.Context(), contextKeyTracker, tracker)
 
-		ctx := context.WithValue(request.Context(), contextKeyTracker, tracker)
+			s := simpleResponseWriter{
+				code:           http.StatusOK,
+				ResponseWriter: response,
+			}
 
-		s := simpleResponseWriter{
-			code:           http.StatusOK,
-			ResponseWriter: response,
+			next.ServeHTTP(
+				s,
+				request.WithContext(ctx))
+
+			//TODO: there is work to be done to capture information on the span that wraps the entire
+			//ServeHTTP.
+			tracker.Finish(Result{
+				Code:    s.code,
+				Success: s.code < 400,
+			})
+
+		} else {
+			next.ServeHTTP(response, request)
 		}
-
-		next.ServeHTTP(
-			s,
-			request.WithContext(ctx))
-
-		//TODO: there is work to be done to capture information on the span that wraps the entire
-		//ServeHTTP.
-		tracker.Finish(Result{
-			Code:    s.code,
-			Success: s.code < 400,
-		})
 	})
 }
 
@@ -72,12 +76,14 @@ func New(options ...HTTPSpannerOptions) (spanner *HTTPSpanner) {
 
 	//define the default behavior which is a simple
 	//extraction of money trace context off the headers
-	spanner.sd = func(r *http.Request) Span {
-		//TODO: SpanDecoder should probably return the below error
-		tc, _ := decodeTraceContext(r.Header.Get(MoneyHeader))
-		return Span{
-			TC: tc,
+	spanner.sd = func(r *http.Request) (s Span, err error) {
+		var tc *TraceContext
+		if tc, err = decodeTraceContext(r.Header.Get(MoneyHeader)); err == nil {
+			s = Span{
+				TC: tc,
+			}
 		}
+		return
 	}
 
 	for _, o := range options {

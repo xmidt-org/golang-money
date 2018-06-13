@@ -86,5 +86,9 @@ func (s *Span) String() string {
 		o.WriteString(fmt.Sprintf(";http-response-code=%v", s.Code))
 	}
 
+	if s.Err != nil {
+		o.WriteString(fmt.Sprintf(";err=%v", s.Code))
+	}
+
 	return o.String()
 }
