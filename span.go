@@ -63,7 +63,6 @@ type Result struct {
 }
 
 //String() returns the string representation of the span
-//TODO: update with new variables added to Span like err
 func (s *Span) String() string {
 	var o = new(bytes.Buffer)
 
