@@ -55,8 +55,9 @@ func testStart(t *testing.T) {
 
 	var end HTTPTracker
 	/* Following call results in panic.
-	 * TODO - Need clarification on the following. Start is a method call of pointer receiver HTTPTracker and returns a HTTPTracker
-	 */
+		 * This fails in the same manner as testHTTPTrackerStart in tracker_test.go.
+	         * To be verified after root cause of testHTTPTrackerStart in tracker_test.go failure is fixed.
+	*/
 	//end := h.Start(c, s)
 	assert.NotNil(t, end)
 }
