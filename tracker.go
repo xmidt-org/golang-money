@@ -151,7 +151,7 @@ func (t *HTTPTracker) String() (v string) {
 }
 
 //Spans returns the list of string-encoded spans under this tracker
-//once the main span under the tracker is finished, zero value otherwiset
+//once the main span under the tracker is finished, zero value otherwise
 func (t *HTTPTracker) Spans() (spans []string) {
 	t.m.RLock()
 	defer t.m.RUnlock()
