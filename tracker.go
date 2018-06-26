@@ -138,17 +138,20 @@ func (t *HTTPTracker) Finish(r Result) {
 }
 
 //String returns the string representation of the span associated with this
-//HTTPTrackertracker
+//HTTPTrackertracker once such span has finished, zero value otherwise
 func (t *HTTPTracker) String() (v string) {
 	t.m.RLock()
 	defer t.m.RUnlock()
 
-	v = t.span.String()
+	if t.done {
+		v = t.span.String()
+	}
+
 	return
 }
 
 //Spans returns the list of string-encoded spans under this tracker
-//once the main span under the tracker is finished. It returns an empty list otherwise
+//once the main span under the tracker is finished, zero value otherwiset
 func (t *HTTPTracker) Spans() (spans []string) {
 	t.m.RLock()
 	defer t.m.RUnlock()

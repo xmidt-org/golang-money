@@ -34,7 +34,7 @@ func (hs *HTTPSpanner) Start(ctx context.Context, s Span) Tracker {
 
 //Decorate provides an Alice-style decorator for handlers
 //that wish to use money
-func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
+func (hs *HTTPSpanner) Decorate(appName string, next http.Handler) http.Handler {
 	if hs == nil {
 		// allow DI of nil values to shut off money trace
 		return next
@@ -42,6 +42,7 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if span, err := hs.SD(request); err == nil {
+			span.AppName, span.Name = appName, "ServeHTTP"
 			tracker := hs.Start(request.Context(), span)
 
 			ctx := context.WithValue(request.Context(), contextKeyTracker, tracker)
@@ -51,16 +52,18 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 				ResponseWriter: response,
 			}
 
-			next.ServeHTTP(
-				s,
-				request.WithContext(ctx))
+			next.ServeHTTP(s, request.WithContext(ctx))
 
-			//TODO: there is work to be done to capture information on the span that wraps the entire
-			//ServeHTTP.
-			tracker.Finish(Result{
-				Code:    s.code,
-				Success: s.code < 400,
-			})
+			//TODO: application and not library code should finish the above tracker
+			//such that information on it could be forwarded
+			//once confirmed, delete the below
+
+			// tracker.Finish(Result{
+			// 	Name:    "ServeHTTP",
+			// 	AppName: appName,
+			// 	Code:    s.code,
+			// 	Success: s.code < 400,
+			// })
 
 		} else {
 			next.ServeHTTP(response, request)
@@ -70,7 +73,7 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 
 type HTTPSpannerOptions func(*HTTPSpanner)
 
-func New(options ...HTTPSpannerOptions) (spanner *HTTPSpanner) {
+func NewHTTPSpanner(options ...HTTPSpannerOptions) (spanner *HTTPSpanner) {
 	spanner = new(HTTPSpanner)
 
 	//define the default behavior which is a simple

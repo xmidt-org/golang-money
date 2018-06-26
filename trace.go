@@ -75,7 +75,7 @@ func decodeTraceContext(raw string) (tc *TraceContext, err error) {
 	return
 }
 
-//EncodeTraceContext encodes the TraceContext into a string
+//EncodeTraceContext encodes the TraceContext into a string.
 //This is useful if you want to pass your trace context over an outgoing request
 func EncodeTraceContext(tc *TraceContext) string {
 	return fmt.Sprintf("%s=%v;%s=%v;%s=%v", pIDKey, tc.PID, sIDKey, tc.SID, tIDKey, tc.TID)
