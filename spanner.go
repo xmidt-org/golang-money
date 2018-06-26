@@ -6,8 +6,7 @@ import (
 	"time"
 )
 
-// Spanner is the core interface for this package.  It acts as the factory for spans
-// for all downstream code.
+// Spanner acts as the factory for spans for all downstream code.
 type Spanner interface {
 	Start(context.Context, Span) Tracker
 }

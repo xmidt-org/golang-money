@@ -40,15 +40,19 @@ type Tracker interface {
 	// String provides the representation of the managed span
 	String() string
 
+	//DecorateTransactor provides a strategy to inspect transactor arguments and outputs
 	DecorateTransactor(Transactor, ...SpanForwardingOptions) Transactor
 
+	//Spans returns a list of string-encoded Money spans that have been created under this tracker
 	Spans() []string
 }
 
-//SpanForwardingOptions allows decoding of generic span types into that of golang money
-//Today, spans should be extracted from an HTTP header and returned as a list of string-encode
-//golang-money spans
-type SpanForwardingOptions func(http.Header) []string
+//SpanForwardingOptions allows gathering data from an HTTP response
+//into string-encoded golang money spans
+//application code is responsible to only inspect the response and if otherwise, put back data
+//(i.e if body is read)
+//An use case for this is extracting WRP spans into golang money spans
+type SpanForwardingOptions func(*http.Response) []string
 
 //HTTPTracker is the management type for child spans
 type HTTPTracker struct {
@@ -57,6 +61,7 @@ type HTTPTracker struct {
 	span Span
 
 	//spans contains the string-encoded value of all spans created under this tracker
+	//should be modifiable by multiple goroutines
 	spans []string
 
 	done bool //indicates whether the span associated with this tracker is finished
@@ -86,7 +91,7 @@ func (t *HTTPTracker) DecorateTransactor(transactor Transactor, options ...SpanF
 
 			//options allow converting different span types into money-compatible ones
 			for _, o := range options {
-				for _, span := range o(resp.Header) {
+				for _, span := range o(resp) {
 					t.spans = append(t.spans, span)
 				}
 			}
@@ -142,12 +147,17 @@ func (t *HTTPTracker) String() (v string) {
 	return
 }
 
+//Spans returns the list of string-encoded spans under this tracker
+//once the main span under the tracker is finished. It returns an empty list otherwise
 func (t *HTTPTracker) Spans() (spans []string) {
 	t.m.RLock()
 	defer t.m.RUnlock()
 
-	spans = make([]string, len(t.spans))
-	copy(spans, t.spans)
+	if t.done {
+		spans = make([]string, len(t.spans))
+		copy(spans, t.spans)
+	}
+
 	return
 }
 
