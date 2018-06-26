@@ -17,7 +17,7 @@ type SpanDecoder func(*http.Request) (Span, error)
 // HTTPSpanner implements Spanner and is the root factory
 // for HTTP spans
 type HTTPSpanner struct {
-	sd SpanDecoder
+	SD SpanDecoder
 }
 
 //Start defines the start time of the input span s and returns
@@ -41,7 +41,7 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 	}
 
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		if span, err := hs.sd(request); err == nil {
+		if span, err := hs.SD(request); err == nil {
 			tracker := hs.Start(request.Context(), span)
 
 			ctx := context.WithValue(request.Context(), contextKeyTracker, tracker)
@@ -75,7 +75,8 @@ func New(options ...HTTPSpannerOptions) (spanner *HTTPSpanner) {
 
 	//define the default behavior which is a simple
 	//extraction of money trace context off the headers
-	spanner.sd = func(r *http.Request) (s Span, err error) {
+	//it is overwritten if the options change it
+	spanner.SD = func(r *http.Request) (s Span, err error) {
 		var tc *TraceContext
 		if tc, err = decodeTraceContext(r.Header.Get(MoneyHeader)); err == nil {
 			s = Span{
