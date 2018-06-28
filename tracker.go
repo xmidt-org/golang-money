@@ -15,8 +15,8 @@ const (
 
 //Header keys
 const (
-	MoneyHeader      = "X-Money-Trace"
-	MoneySpansHeader = "X-Money-Spans"
+	MoneyHeader      = "X-MoneyTrace"
+	MoneySpansHeader = "X-MoneySpans"
 
 	//money-trace context keys
 	tIDKey = "trace-id"
