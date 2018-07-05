@@ -13,6 +13,7 @@ func TestHTTPTracker(t *testing.T) {
 	t.Run("Start", testHTTPTrackerStart)
 	t.Run("Finish", testHTTPTrackerFinish)
 	t.Run("String", testHTTPTrackerString)
+        t.Run("TrackerFromContext", testTrackerFromContext)
 }
 
 func testHTTPTrackerStart(t *testing.T) {
@@ -123,4 +124,8 @@ func testHTTPTrackerString(t *testing.T) {
 	var expected = "span-name=test-span;app-name=test-app;span-duration=1000000;span-success=true;span-id=1;trace-id=test-trace;parent-id=1;start-time=1000000;host=localhost;http-response-code=200"
 
 	assert.Equal(t, i.String(), expected)
+}
+
+func testTrackerFromContext(t *testing.T) {
+
 }
