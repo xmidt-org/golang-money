@@ -6,8 +6,7 @@ import (
 	"time"
 )
 
-// Spanner is the core interface for this package.  It acts as the factory for spans
-// for all downstream code.
+// Spanner acts as the factory for spans for all downstream code.
 type Spanner interface {
 	Start(context.Context, Span) Tracker
 }
@@ -18,7 +17,7 @@ type SpanDecoder func(*http.Request) (Span, error)
 // HTTPSpanner implements Spanner and is the root factory
 // for HTTP spans
 type HTTPSpanner struct {
-	sd SpanDecoder
+	SD SpanDecoder
 }
 
 //Start defines the start time of the input span s and returns
@@ -35,14 +34,15 @@ func (hs *HTTPSpanner) Start(ctx context.Context, s Span) Tracker {
 
 //Decorate provides an Alice-style decorator for handlers
 //that wish to use money
-func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
+func (hs *HTTPSpanner) Decorate(appName string, next http.Handler) http.Handler {
 	if hs == nil {
 		// allow DI of nil values to shut off money trace
 		return next
 	}
 
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		if span, err := hs.sd(request); err == nil {
+		if span, err := hs.SD(request); err == nil {
+			span.AppName, span.Name = appName, "ServeHTTP"
 			tracker := hs.Start(request.Context(), span)
 
 			ctx := context.WithValue(request.Context(), contextKeyTracker, tracker)
@@ -52,16 +52,18 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 				ResponseWriter: response,
 			}
 
-			next.ServeHTTP(
-				s,
-				request.WithContext(ctx))
+			next.ServeHTTP(s, request.WithContext(ctx))
 
-			//TODO: there is work to be done to capture information on the span that wraps the entire
-			//ServeHTTP.
-			tracker.Finish(Result{
-				Code:    s.code,
-				Success: s.code < 400,
-			})
+			//TODO: application and not library code should finish the above tracker
+			//such that information on it could be forwarded
+			//once confirmed, delete the below
+
+			// tracker.Finish(Result{
+			// 	Name:    "ServeHTTP",
+			// 	AppName: appName,
+			// 	Code:    s.code,
+			// 	Success: s.code < 400,
+			// })
 
 		} else {
 			next.ServeHTTP(response, request)
@@ -71,12 +73,13 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 
 type HTTPSpannerOptions func(*HTTPSpanner)
 
-func New(options ...HTTPSpannerOptions) (spanner *HTTPSpanner) {
+func NewHTTPSpanner(options ...HTTPSpannerOptions) (spanner *HTTPSpanner) {
 	spanner = new(HTTPSpanner)
 
 	//define the default behavior which is a simple
 	//extraction of money trace context off the headers
-	spanner.sd = func(r *http.Request) (s Span, err error) {
+	//it is overwritten if the options change it
+	spanner.SD = func(r *http.Request) (s Span, err error) {
 		var tc *TraceContext
 		if tc, err = decodeTraceContext(r.Header.Get(MoneyHeader)); err == nil {
 			s = Span{
