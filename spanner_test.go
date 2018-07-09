@@ -96,7 +96,7 @@ func testTrackerFinish(t *testing.T) {
 	tracker = spanner.Start(context.Background(), s).(*HTTPTracker)
 	require.NotNil(t, tracker)
 
-	tracker.m = &sync.RWMutex{}
+	tracker.m = sync.RWMutex{}
 	r = Result{
 		Name:    "test-result-span",
 		AppName: "test-finish-app",
