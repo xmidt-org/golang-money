@@ -1,37 +1,165 @@
 package money
 
-// import (
-// 	"testing"
-// 	"time"
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"reflect"
+	"testing"
+	"time"
 
-// 	"github.com/stretchr/testify/assert"
-// 	"github.com/stretchr/testify/require"
-// )
+	"github.com/stretchr/testify/assert"
+)
 
-// func TestSpan(t *testing.T) {
-// 	t.Run("String", testSpanString)
-// }
+// Time stub to simulate a clock
+type Clock interface {
+	Start() time.Time
+	End(t time.Time) time.Duration
+}
 
-// func testSpanString(t *testing.T) {
-// 	startTime, e := time.Parse(time.RFC3339, "1970-01-01T00:00:01+00:00") //1 second into epoch time = 1,000,000 microseconds
-// 	require.Nil(t, e)
+type stubClock struct{}
 
-// 	i := &Span{
-// 		Name:    "test-span",
-// 		AppName: "test-app",
-// 		TC: &TraceContext{
-// 			TID: "test-trace",
-// 			SID: 1,
-// 			PID: 1,
-// 		},
-// 		Success:   true,
-// 		Code:      200,
-// 		StartTime: startTime,
-// 		Duration:  time.Second,
-// 		Host:      "localhost",
-// 	}
+func (stubClock) Start() time.Time { return time.Now() }
 
-// 	var expected = "span-name=test-span;app-name=test-app;span-duration=1000000;span-success=true;span-id=1;trace-id=test-trace;parent-id=1;start-time=1000000;host=localhost;http-response-code=200"
+func (stubClock) End(t time.Time) time.Duration { return time.Since(t) }
 
-// 	assert.Equal(t, i.String(), expected)
-// }
+func createMockTC() *TraceContext {
+	return &TraceContext{
+		TID: "test-trace",
+		SID: 1,
+		PID: 1,
+	}
+}
+
+func createMockSpan() *Span {
+	var tc = createMockTC()
+	var s time.Time
+	var d time.Duration
+	var err = fmt.Errorf("err")
+
+	return &Span{
+		Name:      "test-span",
+		AppName:   "test-app",
+		TC:        tc,
+		Success:   true,
+		Code:      1,
+		StartTime: s,
+		Duration:  d,
+		Host:      "localhost",
+		Err:       err,
+	}
+}
+
+func TestNewSpan(t *testing.T) {
+	var tc = createMockTC()
+	var expected = Span{
+		Name: "test-span",
+		TC:   tc,
+	}
+
+	assert.Equal(t, expected, NewSpan("test-span", tc))
+}
+
+func TestMapFieldToString(t *testing.T) {
+	var s = createMockSpan()
+	var m map[string]interface{}
+
+	var ourClock stubClock
+	var startTime = ourClock.Start()
+	time.Sleep(200000000)
+	var duration = ourClock.End(startTime)
+
+	s.StartTime, s.Duration = startTime, duration
+
+	r, err := json.Marshal(s)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	json.Unmarshal(r, &m)
+
+	var actual = mapFieldToString(m)
+
+	var expected = SpanMap{
+		"Name":      "test-span",
+		"AppName":   "test-app",
+		"TC":        "parent-id=1;span-id=1;trace-id=test-trace",
+		"Success":   "true",
+		"Code":      "1",
+		"Duration":  fmt.Sprintf("%v"+"ns", duration.Nanoseconds()),
+		"StartTime": startTime.Format("2006-01-02T15:04:05.999999999Z07:00"),
+		"Err":       "Error",
+		"Host":      "localhost",
+	}
+
+	// assert.Equal(t, expected, n)
+	ok := reflect.DeepEqual(expected, actual)
+	if !ok {
+		t.Errorf("Expected:\n%v\n\nActual:\n%v", expected, actual)
+	}
+}
+
+func TestMap(t *testing.T) {
+	s := createMockSpan()
+
+	var ourClock stubClock
+	var startTime = ourClock.Start()
+	time.Sleep(200000000)
+	var duration = ourClock.End(startTime)
+
+	s.StartTime, s.Duration = startTime, duration
+
+	sm, err := s.Map()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var expected = SpanMap{
+		"Name":      "test-span",
+		"AppName":   "test-app",
+		"TC":        "parent-id=1;span-id=1;trace-id=test-trace",
+		"Success":   "true",
+		"Code":      "1",
+		"Duration":  fmt.Sprintf("%v"+"ns", duration.Nanoseconds()),
+		"StartTime": startTime.Format("2006-01-02T15:04:05.999999999Z07:00"),
+		"Err":       "Error",
+		"Host":      "localhost",
+	}
+
+	assert.Equal(t, expected, sm)
+}
+
+func TestString(t *testing.T) {
+
+	var ourClock stubClock
+	var startTime = ourClock.Start()
+	time.Sleep(200000000)
+	var duration = ourClock.End(startTime)
+
+	var startTimeString = startTime.Format("2006-01-02T15:04:05.999999999Z07:00")
+	var durationString = fmt.Sprintf("%v"+"ns", duration.Nanoseconds())
+
+	var s = &Span{
+		Name:      "test-span",
+		AppName:   "test-app",
+		TC:        createMockTC(),
+		Success:   true,
+		Code:      1,
+		StartTime: startTime,
+		Duration:  duration,
+		Host:      "localhost",
+	}
+
+	var expected = "span-name=test-span" +
+		";app-name=test-app" +
+		";span-duration=" + durationString +
+		";span-success=true" +
+		";parent-id=1" +
+		";span-id=1" +
+		";trace-id=test-trace" +
+		";start-time=" + startTimeString +
+		";host=localhost" +
+		";response-code=1"
+
+	assert.Equal(t, s.String(), expected)
+}

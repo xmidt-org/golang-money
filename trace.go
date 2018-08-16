@@ -9,26 +9,26 @@ import (
 	"time"
 )
 
-//Trace Context decoding errors
+// Trace Context decoding errors
 var (
 	errPairsCount = errors.New("expecting three pairs in trace context")
 	errBadPair    = errors.New("expected trace context header to have pairs")
 	errBadTrace   = errors.New("malformatted trace context header")
 )
 
-//TraceContext encapsutes all the core information of any given span
-//In a single trace, the TID is the same across all spans and
-//the SID and the PID is what links all spans together
+// TraceContext encapsutes all the core information of any given span
+// In a single trace, the TID is the same across all spans and
+// the SID and the PID is what links all spans together
 type TraceContext struct {
 	TID string //Trace ID
 	SID int64  //Span ID
 	PID int64  //Parent ID
 }
 
-//decodeTraceContext returns a TraceContext from the given value "raw"
-//raw is typically taken directly from http.Request headers
-//for now, it is overly strict with the expected format
-//TODO: could we use regex here instead for simplicity?
+// decodeTraceContext returns a TraceContext from the given value "raw"
+// raw is typically taken directly from http.Request headers
+// for now, it is overly strict with the expected format
+// TODO: could we use regex here instead for simplicity?
 func decodeTraceContext(raw string) (tc *TraceContext, err error) {
 	tc = new(TraceContext)
 
@@ -75,13 +75,45 @@ func decodeTraceContext(raw string) (tc *TraceContext, err error) {
 	return
 }
 
-//EncodeTraceContext encodes the TraceContext into a string.
-//This is useful if you want to pass your trace context over an outgoing request
+// encodeTraceContext returns a concatenated string of all field values that exist in a trace context.
+func encodeTC(tc interface{}) string {
+	tcs := tc.(map[string]interface{})
+
+	m := map[string]string{
+		"PID": "",
+		"SID": "",
+		"TID": "",
+	}
+
+	for k, v := range tcs {
+		switch v.(type) {
+		case int:
+			m[k] = fmt.Sprintf("%v", tcs[k].(int))
+		case float64:
+			m[k] = fmt.Sprintf("%v", tcs[k].(float64))
+		case string:
+			m[k] = tcs[k].(string)
+		}
+	}
+
+	return fmt.Sprintf("%s=%v;%s=%v;%s=%v", pIDKey, m["PID"], sIDKey, m["SID"], tIDKey, m["TID"])
+}
+
+/*
+	fmt.Sprintf("%s=%v;%s=%v;%s=%v", pIDKey, tc[PID].(float64), sIDKey, tc[SID].(float64), tIDKey, tc[TID].(string))
+*/
+
+// EncodeTraceContext encodes the TraceContext into a string.
+func encodeTraceContext(tc *TraceContext) string {
+	return fmt.Sprintf("%s=%v;%s=%v;%s=%v", pIDKey, tc.PID, sIDKey, tc.SID, tIDKey, tc.TID)
+}
+
+// This is useful if you want to pass your trace context over an outgoing request or just need a string formatted trace context for any other purpose.
 func EncodeTraceContext(tc *TraceContext) string {
 	return fmt.Sprintf("%s=%v;%s=%v;%s=%v", pIDKey, tc.PID, sIDKey, tc.SID, tIDKey, tc.TID)
 }
 
-//SubTrace creates a child trace context for current
+// SubTrace creates a child trace context for current
 func SubTrace(current *TraceContext) *TraceContext {
 	rand.Seed(time.Now().Unix())
 	return &TraceContext{
