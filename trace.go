@@ -76,14 +76,10 @@ func decodeTraceContext(raw string) (tc *TraceContext, err error) {
 }
 
 // encodeTraceContext returns a concatenated string of all field values that exist in a trace context.
-func encodeTC(tc interface{}) string {
+func typeInferenceTC(tc interface{}) string {
 	tcs := tc.(map[string]interface{})
 
-	m := map[string]string{
-		"PID": "",
-		"SID": "",
-		"TID": "",
-	}
+	m := map[string]string{}
 
 	for k, v := range tcs {
 		switch v.(type) {
@@ -99,10 +95,6 @@ func encodeTC(tc interface{}) string {
 	return fmt.Sprintf("%s=%v;%s=%v;%s=%v", pIDKey, m["PID"], sIDKey, m["SID"], tIDKey, m["TID"])
 }
 
-/*
-	fmt.Sprintf("%s=%v;%s=%v;%s=%v", pIDKey, tc[PID].(float64), sIDKey, tc[SID].(float64), tIDKey, tc[TID].(string))
-*/
-
 // EncodeTraceContext encodes the TraceContext into a string.
 func encodeTraceContext(tc *TraceContext) string {
 	return fmt.Sprintf("%s=%v;%s=%v;%s=%v", pIDKey, tc.PID, sIDKey, tc.SID, tIDKey, tc.TID)
@@ -110,7 +102,7 @@ func encodeTraceContext(tc *TraceContext) string {
 
 // This is useful if you want to pass your trace context over an outgoing request or just need a string formatted trace context for any other purpose.
 func EncodeTraceContext(tc *TraceContext) string {
-	return fmt.Sprintf("%s=%v;%s=%v;%s=%v", pIDKey, tc.PID, sIDKey, tc.SID, tIDKey, tc.TID)
+	return encodeTraceContext(tc)
 }
 
 // SubTrace creates a child trace context for current

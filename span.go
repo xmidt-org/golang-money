@@ -101,7 +101,7 @@ func mapFieldToString(m map[string]interface{}) SpanMap {
 			n[k] = m[k].(string)
 		case map[string]interface{}:
 			if k == "TC" {
-				n[k] = encodeTC(m[k])
+				n[k] = typeInferenceTC(m[k])
 			} else if k == "Err" {
 				n[k] = "Error"
 			}
