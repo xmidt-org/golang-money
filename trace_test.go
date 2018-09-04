@@ -81,7 +81,7 @@ func TestDecodeTraceContextOtherCases(t *testing.T) {
 }
 
 //TODO: need to if a string is in the right order accordance.
-// Tests if encodeTraceContext outputs a the fields of a TID in the correct order.
+// Tests if typeInferenceTC  outputs a the fields of a TID in the correct order.
 func TestTypeInferenceTC(t *testing.T) {
 	in := map[string]interface{}{
 		"PID": 1,

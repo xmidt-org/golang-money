@@ -75,7 +75,7 @@ func decodeTraceContext(raw string) (tc *TraceContext, err error) {
 	return
 }
 
-// encodeTraceContext returns a concatenated string of all field values that exist in a trace context.
+// typeInferenceTC  returns a concatenated string of all field values that exist in a trace context from a map[string]interface{}
 func typeInferenceTC(tc interface{}) string {
 	tcs := tc.(map[string]interface{})
 
