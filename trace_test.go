@@ -80,6 +80,23 @@ func TestDecodeTraceContextOtherCases(t *testing.T) {
 	})
 }
 
+//TODO: need to if a string is in the right order accordance.
+// Tests if typeInferenceTC  outputs a the fields of a TID in the correct order.
+func TestTypeInferenceTC(t *testing.T) {
+	in := map[string]interface{}{
+		"PID": 1,
+		"SID": 1,
+		"TID": "one",
+	}
+
+	var expected = "parent-id=1;span-id=1;trace-id=one"
+	var actual = typeInferenceTC(in)
+
+	if actual != expected {
+		t.Errorf("Wrong Format for Trace Context string, need '%v' but got '%v'", expected, actual)
+	}
+}
+
 func TestEncodeTraceContext(t *testing.T) {
 	in := &TraceContext{
 		PID: 1,
