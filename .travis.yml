@@ -3,10 +3,18 @@ go:
  - "1.10"
 
 before_install:
-    - sudo pip install --user codecov
+  - sudo pip install --user codecov
+
+install:
+  - go get github.com/alecthomas/gometalinter
+  - gometalinter --install --vendored-linters
+
+cache:
+  directories:
+    - ~/.cache
 
 script:
- - go test -coverprofile=coverage.txt
+ - ./run_tests.sh $GOVERSION
 
 after_success:
     - bash <(curl -s https://codecov.io/bash)
