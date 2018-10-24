@@ -2,10 +2,20 @@ package money
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"os"
 	"sync"
 	"time"
+)
+
+// Tracking errors
+var (
+	errTrackerNotFinished = errors.New("Tracker should have not yet finished")
+	// As of now the only method that changes a http trackers field, done, is Finish
+	errTrackerAlreadyFinished       = errors.New("Tracker needs to be finished to utilize this function")
+	errRequestDoesNotContainTracker = errors.New("Tracker does not contain tracker")
+	errTrackerHasNotBeenInjected    = errors.New("Tracker has not been injected")
 )
 
 type contextKey int
@@ -15,157 +25,217 @@ const (
 	contextKeyTracker contextKey = iota
 )
 
-//Header keys
-const (
-	MoneyHeader      = "X-MoneyTrace"
-	MoneySpansHeader = "X-MoneySpans"
-
-	//money-trace context keys
-	tIDKey = "trace-id"
-	pIDKey = "parent-id"
-	sIDKey = "span-id"
-)
-
 //Transactor is an HTTP transactor type
 type Transactor func(*http.Request) (*http.Response, error)
 
-// Tracker is the management interface for an active span.  It can be used to create
-// child spans and to mark the current span as finished.
+// Tracker is the management interface for an active span.
 type Tracker interface {
-	Spanner
+
+	// Create a new child span given a request's context and prior span's trace context
+	SubTrace(context.Context, HTTPSpanner) (*HTTPTracker, error)
 
 	// Finish concludes this span with the given result
-	Finish(Result)
+	Finish() (Result, error)
 
-	// String provides the representation of the managed span
-	String() string
+	// String provides the string representation of the managed span
+	String() (string, error)
 
-	//DecorateTransactor provides a strategy to inspect transactor arguments and outputs
+	// Map provides the representation the map span representation of the managed span.
+	Map() (SpanMap, error)
+
+	// Spans returns a list of string-encoded spans in a map fashion.
+	SpansMap() ([]SpanMap, error)
+
+	// Spans returns a list of string-encoded Money spans that have been created under this tracker
+	SpansList() ([]string, error)
+
+	// DecorateTransactor provides a strategy to inspect transactor arguments and outputs
 	DecorateTransactor(Transactor, ...SpanForwardingOptions) Transactor
 
-	//Spans returns a list of string-encoded Money spans that have been created under this tracker
-	Spans() []string
+	// HTTPTracker returns a http tracker object.
+	HTTPTracker() *HTTPTracker
 }
 
-//SpanForwardingOptions allows gathering data from an HTTP response
-//into string-encoded golang money spans
-//application code is responsible to only inspect the response and if otherwise, put back data
-//(i.e if body is read)
-//An use case for this is extracting WRP spans into golang money spans
-type SpanForwardingOptions func(*http.Response) []string
-
-//HTTPTracker is the management type for child spans
+// HTTPTracker is the management type for child spans
 type HTTPTracker struct {
-	Spanner
-	m    *sync.RWMutex
-	span Span
+	*HTTPSpanner
+	m sync.RWMutex
 
-	//spans contains the string-encoded value of all spans created under this tracker
-	//should be modifiable by multiple goroutines
-	spans []string
+	span *Span
 
-	done bool //indicates whether the span associated with this tracker is finished
+	// spans contains the string-encoded value of all spans created under this tracker
+	// should be modifiable by multiple goroutines
+	spansList []string
+
+	// spansMaps contains span maps of all spans created under this tracker
+	spansMaps []SpanMap
+
+	// indicates whether the span associated with this tracker is finished
+	done bool
 }
 
-//DecorateTransactor configures a transactor to both
-//inject Money Trace Context into outgoing requests
-//and extract Money Spans from their responses (if any)
+// NewHTTPTracker defines the start time of the input span s and returns
+// a HTTPTracker.  It is utilized by a HTTPTracker Start method.
+func NewHTTPTracker(ctx context.Context, s *Span, sp *HTTPSpanner) *HTTPTracker {
+	s.StartTime = time.Now()
+
+	return &HTTPTracker{
+		span:        s,
+		HTTPSpanner: sp,
+	}
+}
+
+// SubTrace starts a child span from the given span s.   A child span's paramount attribute
+// is it's trace context, TC,  due to a span's span-id/SID uniqueness.
+func (t *HTTPTracker) SubTrace(ctx context.Context, sp *HTTPSpanner) (*HTTPTracker, error) {
+	t.m.RLock()
+	defer t.m.RUnlock()
+
+	if !t.done {
+		return &HTTPTracker{
+			span: &Span{
+				TC:        doSubTrace(t.span.TC),
+				StartTime: time.Now(),
+			},
+			HTTPSpanner: sp,
+		}, nil
+	}
+
+	return nil, errTrackerNotFinished
+}
+
+// Finish is an idempotent operation that marks the end of the underlying HTTPTracker by adding appending spans maps and spans list as well as
+// returning a Span's contents as a Result object.
+func (t *HTTPTracker) Finish() (Result, error) {
+	t.m.Lock()
+	defer t.m.Unlock()
+
+	if !t.done {
+		t.span.Host, _ = os.Hostname()
+		t.span.AppName = os.Args[0]
+		t.span.Duration = time.Since(t.span.StartTime)
+		//	t.span.Code = //TODO get span code
+		t.span.Success = t.span.Code < 400
+
+		t.spansList = append(t.spansList, t.span.String())
+		t.spansMaps = append(t.spansMaps, t.span.Map())
+		t.done = true
+
+		return Result{
+			Name:      t.span.Name,
+			TC:        encodeTraceContext(t.span.TC),
+			AppName:   os.Args[0],
+			Code:      t.span.Code,
+			Success:   t.span.Success,
+			Err:       t.span.Err,
+			StartTime: t.span.StartTime,
+			Duration:  t.span.Duration,
+			Host:      t.span.Host,
+		}, nil
+	} else {
+		return Result{}, errTrackerAlreadyFinished
+	}
+}
+
+// String returns the string representation of the span associated with this
+// HTTPTracker once such span has finished, zero value otherwise
+func (t *HTTPTracker) String() (v string, err error) {
+	t.m.Lock()
+	defer t.m.Unlock()
+
+	if t.done {
+		v = t.span.String()
+		return v, nil
+	}
+
+	return "", errTrackerNotFinished
+}
+
+// SpansMap returns the map representation of the span associated with this
+// HTTPTracker once such span has finished, zero value otherwise.
+func (t *HTTPTracker) Map() (v SpanMap, err error) {
+	t.m.Lock()
+	defer t.m.Unlock()
+
+	if t.done {
+		v = t.span.Map()
+		return v, nil
+	}
+
+	return nil, errTrackerNotFinished
+}
+
+// Spans returns the list of string-encoded spans under this tracker
+// once the main span under the tracker is finished, zero value otherwise.
+func (t *HTTPTracker) SpansList() (spansList []string, err error) {
+	t.m.RLock()
+	defer t.m.RUnlock()
+
+	if t.done {
+		spansList = make([]string, len(t.spansList))
+		copy(spansList, t.spansList)
+		return spansList, nil
+	}
+
+	return nil, errTrackerNotFinished
+}
+
+// SpansMaps returns the list of span map objects under this tracker
+// once the main span under the tracker is finished, zero value otherwise.
+func (t *HTTPTracker) SpansMap() (spansMap []SpanMap, err error) {
+	t.m.RLock()
+	defer t.m.RUnlock()
+
+	if t.done {
+		spansMaps := make([]SpanMap, len(t.spansMaps))
+		copy(spansMaps, t.spansMaps)
+		return spansMaps, nil
+	}
+
+	return nil, errTrackerNotFinished
+}
+
+// DecorateTransactor provides a path for specific HTTPTracker behavior given a span forwarding option.
 func (t *HTTPTracker) DecorateTransactor(transactor Transactor, options ...SpanForwardingOptions) Transactor {
 	return func(r *http.Request) (resp *http.Response, e error) {
 		t.m.RLock()
-		r.Header.Add(MoneyHeader, EncodeTraceContext(t.span.TC))
+		// TODO: ensure that the last trace context is different then the current before setting a requests header. Subtrace has had to occur here .
+		r.Header.Set(MoneyHeader, encodeTraceContext(t.span.TC))
 		t.m.RUnlock()
 
-		if resp, e = transactor(r); e == nil {
+		if resp, e = transactor(InjectTracker(r, t)); e == nil {
 			t.m.Lock()
 			defer t.m.Unlock()
 
-			//the default behavior is always run
-			for k, vs := range resp.Header {
-				if k == MoneySpansHeader {
-					for _, v := range vs {
-						t.spans = append(t.spans, v)
-					}
-				}
-			}
+			t.storeMoneySpans(resp.Header)
 
 			//options allow converting different span types into money-compatible ones
 			for _, o := range options {
-				for _, span := range o(resp) {
-					t.spans = append(t.spans, span)
-				}
+				t.spansList = append(t.spansList, o(resp)...)
 			}
+
 		}
 		return
 	}
 }
 
-//Start defines the money trace context for span s based
-//on the underlying HTTPTracker span before delegating the
-//start process to the Spanner
-//if such underlying span has already finished, the returned
-//tracker is nil
-func (t *HTTPTracker) Start(ctx context.Context, s Span) (tracker Tracker) {
-	t.m.RLock()
-	defer t.m.RUnlock()
-
-	if !t.done {
-		s.TC = SubTrace(t.span.TC)
-		tracker = t.Spanner.Start(ctx, s)
-	}
-
-	return
-}
-
-//Finish is an idempotent operation that marks the end of the underlying HTTPTracker span
-func (t *HTTPTracker) Finish(r Result) {
-	t.m.Lock()
-	defer t.m.Unlock()
-
-	if !t.done {
-		t.span.Duration = time.Since(t.span.StartTime)
-		t.span.Host, _ = os.Hostname()
-		t.span.Name = r.Name
-		t.span.AppName = r.AppName
-		t.span.Code = r.Code
-		t.span.Err = r.Err
-		t.span.Success = r.Success
-
-		t.spans = append(t.spans, t.span.String())
-
-		t.done = true
+// storeMoneySpans adds a responses money spans to a HTTPTracker objects spansList
+func (t *HTTPTracker) storeMoneySpans(h http.Header) {
+	for k, vs := range h {
+		if k == MoneySpansHeader {
+			t.spansList = append(t.spansList, vs...)
+			return
+		}
 	}
 }
 
-//String returns the string representation of the span associated with this
-//HTTPTrackertracker once such span has finished, zero value otherwise
-func (t *HTTPTracker) String() (v string) {
-	t.m.RLock()
-	defer t.m.RUnlock()
-
-	if t.done {
-		v = t.span.String()
-	}
-
-	return
+// Returns a HTTPTracker object.
+func (t *HTTPTracker) HTTPTracker() *HTTPTracker {
+	return t
 }
 
-//Spans returns the list of string-encoded spans under this tracker
-//once the main span under the tracker is finished, zero value otherwise
-func (t *HTTPTracker) Spans() (spans []string) {
-	t.m.RLock()
-	defer t.m.RUnlock()
-
-	if t.done {
-		spans = make([]string, len(t.spans))
-		copy(spans, t.spans)
-	}
-
-	return
-}
-
-//TrackerFromContext extracts a tracker contained in the given context, if any
-func TrackerFromContext(ctx context.Context) (t Tracker, ok bool) {
-	t, ok = ctx.Value(contextKeyTracker).(Tracker)
-	return
+// TrackerFromContext extracts a tracker contained in a given context.
+func TrackerFromContext(ctx context.Context) (*HTTPTracker, bool) {
+	t, ok := ctx.Value(contextKeyTracker).(*HTTPTracker)
+	return t.HTTPTracker(), ok
 }

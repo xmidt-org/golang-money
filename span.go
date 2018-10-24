@@ -28,7 +28,6 @@ import (
 // It is a superset to what is specified in the
 // spec: https://github.com/Comcast/money/wiki#what-is-captured
 type Span struct {
-	//the user gives us these values
 	Name    string
 	AppName string
 	TC      *TraceContext
@@ -48,6 +47,7 @@ type Result struct {
 	Name string
 
 	// Start Time
+	TC string
 
 	// Name of the application/service running the Span (i.e. Scytale in XMiDT)
 	AppName string
@@ -72,8 +72,8 @@ type Result struct {
 }
 
 // NewSpan returns a new span instance.
-func NewSpan(spanName string, tc *TraceContext) Span {
-	return Span{
+func NewSpan(spanName string, tc *TraceContext) *Span {
+	return &Span{
 		Name: spanName,
 		TC:   tc,
 	}
@@ -112,18 +112,15 @@ func mapFieldToString(m map[string]interface{}) SpanMap {
 }
 
 // Map returns a string map representation of the span
-func (s *Span) Map() (SpanMap, error) {
+func (s *Span) Map() SpanMap {
 	var m map[string]interface{}
 
 	// Receive a map of string to objects
-	r, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
+	r, _ := json.Marshal(s)
 
 	json.Unmarshal(r, &m)
 
-	return mapFieldToString(m), nil
+	return mapFieldToString(m)
 }
 
 // String returns the string representation of the span
@@ -132,10 +129,15 @@ func (s *Span) String() string {
 
 	o.WriteString("span-name=" + s.Name)
 	o.WriteString(";app-name=" + s.AppName)
-	o.WriteString(";span-duration=" + fmt.Sprintf("%v"+"ns", s.Duration.Nanoseconds()))
+	o.WriteString(";span-duration=" + strconv.FormatInt(s.Duration.Nanoseconds()/1e3, 10)) //span duration in microseconds
+	//	o.WriteString(";span-duration=" + strconv.FormatInt(s.Duration.Nanoseconds()/1e3, 10)) //span duration in microseconds
 	o.WriteString(";span-success=" + strconv.FormatBool(s.Success))
-	o.WriteString(";" + encodeTraceContext(s.TC))
-	o.WriteString(";start-time=" + s.StartTime.Format("2006-01-02T15:04:05.999999999Z07:00"))
+
+	o.WriteString(";span-id=" + string(s.TC.SID))
+	o.WriteString(";trace-id=" + s.TC.TID)
+	o.WriteString(";parent-id=" + string(s.TC.PID))
+
+	o.WriteString(fmt.Sprintf(";start-time=%v", +s.StartTime.UTC().UnixNano()))
 
 	if s.Host != "" {
 		o.WriteString(";host=" + s.Host)
@@ -148,6 +150,21 @@ func (s *Span) String() string {
 	if s.Err != nil {
 		o.WriteString(fmt.Sprintf(";err=%v", s.Err))
 	}
+
+	return o.String()
+}
+
+// String returns the string representation of the result.
+func (r *Result) String() string {
+
+	var o = new(bytes.Buffer)
+
+	o.WriteString("span-name=" + r.Name)
+	o.WriteString(";app-name=" + r.AppName)
+	o.WriteString(";host=" + r.Host)
+	o.WriteString(";trace-context=" + r.TC)
+	o.WriteString(";start-time=" + r.StartTime.String())
+	o.WriteString(";span-duration=" + r.Duration.String())
 
 	return o.String()
 }
