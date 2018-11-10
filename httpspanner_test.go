@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 type MockResponse struct {
@@ -42,6 +40,7 @@ func testStart(t *testing.T) {
 	}
 }
 
+/*
 func TestDecorateOff(t *testing.T) {
 	var spanner = NewHTTPSpanner(SpannerOff())
 
@@ -55,10 +54,10 @@ func TestDecorateOff(t *testing.T) {
 	decorated := spanner.Decorate(handler)
 	decorated.ServeHTTP(nil, httptest.NewRequest("GET", "localhost:9090/test", nil))
 }
+*/
 
 func TestDecorateSubTracerON(t *testing.T) {
 	var (
-		pipe   = make(chan *HTTPTracker)
 		mockTC = &TraceContext{
 			PID: 1,
 			SID: 1,
@@ -73,7 +72,7 @@ func TestDecorateSubTracerON(t *testing.T) {
 		mockHT = &HTTPTracker{
 			span: mockSpan,
 		}
-		spanner = NewHTTPSpanner(SubTracerON(pipe))
+		spanner = NewHTTPSpanner(SubTracerON())
 	)
 
 	handler := http.HandlerFunc(
@@ -92,14 +91,11 @@ func TestDecorateSubTracerON(t *testing.T) {
 	var r = httptest.NewRecorder()
 	decorated.ServeHTTP(r, InjectTracker(inputRequest, mockHT))
 
-	ht := <-pipe
-	spew.Dump(ht)
 }
 
 func TestDecorateStarterON(t *testing.T) {
 	var (
-		pipe    = make(chan *HTTPTracker)
-		spanner = NewHTTPSpanner(StarterON(pipe))
+		spanner = NewHTTPSpanner(StarterON())
 	)
 
 	handler := http.HandlerFunc(

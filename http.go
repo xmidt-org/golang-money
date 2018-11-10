@@ -44,10 +44,27 @@ func (rw simpleResponseWriter) WriteMoneySpansHeader(r Result) {
 	h.Set(MoneySpansHeader, o.String())
 }
 
+// WriteSpansHeader results spanned headers to be used in Tr1d1um Encoding
+func WriteSpansHeaderTr1d1um(r Result, w http.ResponseWriter, resp http.Response) http.ResponseWriter {
+	var o = new(bytes.Buffer)
+	// success := w.code < 400
+
+	o.WriteString(r.String())
+	//	o.WriteString(";response-code=" + strconv.Itoa(resp.code))
+	//o.WriteString(fmt.Sprintf(";success=" + strconv.FormatBool(success)))
+	w.Header().Set(MoneySpansHeader, o.String())
+
+	return w
+}
+
 // checkHeaderForMoneySpan checks if a http header contains a MoneyHeader
 func checkHeaderForMoneyTrace(h http.Header) bool {
 	_, ok := h[MoneyHeader]
 	return ok
+}
+
+func CheckHeaderForMoneySpan(h http.Header) bool {
+	return checkHeaderForMoneySpan(h)
 }
 
 // checkHeaderForMoneySpan checks if a http header contains a MoneySpansHeader
@@ -72,3 +89,16 @@ func InjectTracker(request *http.Request, ht *HTTPTracker) *http.Request {
 	ctx := context.WithValue(request.Context(), contextKeyTracker, ht)
 	return request.WithContext(ctx)
 }
+
+/*
+// Writes all spans made under this tracker to response header
+func CompleteList(ht *HTTPTracker, w http.ResponseWriter) http.ResponseWriter {
+	list, err := tracker.SpansList()
+	w.Header().Set("X-Money-Spans")
+	for i, list := range list {
+		w.Header().Add("X-Money-Spans", list[i])
+	}
+
+	return w
+}
+*/

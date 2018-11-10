@@ -40,7 +40,7 @@ if err != nil {
 defer resp.Body.Close()
 ```
 
-A header that contains a trace context {span-id, trace-id, parent-id} and the header, X-MoneyTrace, is a MoneyHeader. MoneyHeaders are required for the Money Decorator
+A header that contains a trace context {span-id, trace-id, parent-id} and the header, X-MoneyTrace, is a MoneyHeader. MoneyHeaders are required for a server's Money Decorator
 to continue a trace.
 
 Whats returned from a host that processes a X-MoneyTrace is a response that contains a X-MoneySpans header.  This header contains details from the host that just received your http request:
@@ -59,7 +59,7 @@ Whats returned from a host that processes a X-MoneyTrace is a response that cont
 |spanSuccess |Was the current span successful                  |
 |host        |host who created this span                       | 
 
-All X-MoneySpans responses are recorded in the HTTPTracker's object list as a concatented string of spand data.  
+All X-MoneySpans responses are recorded in the HTTPTracker's object list as a concatented string of spand data. This is also what the response looks like under the http key X-Money-Spans
 
 ```
 X-Money-Spans: span-id=-460900382554701468;trace-id=de305d54-75b4-431b-adb2-eb6b9e546013;parent-id=-460900382554701468;
@@ -67,21 +67,21 @@ span-name=spanName;app-name=appName;start-time=1412550594494;
 ;http-response-code=500;span-success=false;span-duration=120004.0;host=myHost; 
 ```
 
-#### Using Money into your application:  
+#### Using Money in your application: 
 
-Create a HTTPSpanner using NewHTTPSpanner function.  This function is the plane where specific HTTSpanner options are chosen from.
+Create a HTTPSpanner using NewHTTPSpanner function.  This function is where specific HTTPSpanner options are chosen from.
 
 Currently there are four options to choose from: 
 
-(1) Starter: When a node/machine is responsible for starting a trace and injecting the first HTTPTracker. 
-(2) SubTracer: When a node/machine is responsible for subtracing and the HTTPTracker object needs to be forwarded to a new http request. 
-(3) End:  When a node/machine is responsible for subtracing but does not need to forward the HTTPTracker to a transactor. 
-(4) Off: Turns off the decorator. 
+(1) Starter: When a node/machine is responsible for starting a trace and injecting the first HTTPTracker.\ 
+(2) SubTracer: When a node/machine is responsible for subtracing and the HTTPTracker object needs to be forwarded to a new http request.\ 
+(3) End:  When a node/machine is responsible for subtracing but does not need to forward the HTTPTracker to a transactor.\
+(4) Off: Turns off the decorator.\ 
 
 OPTIONS:
- StarterON()
- SubtracerON()
- EnderON()
+ StarterON()\
+ SubtracerON()\
+ EnderON()\
  Off
 
 ```
@@ -92,7 +92,7 @@ myHTTPSpanner := NewHTTPSpanner(OPTION)
 
 #### Examples: 
 
-Decorate your httpSpanner using a Alice style decorator as well as your transactor. 
+Decorate your httpSpanner and transactor using a Alice style decorator. 
 ```
 chain := alice.New(s.Decorate).Then(yourSpecialHandler)
 httptracker.DecorateTransactor(yourSpecialTransactor)
@@ -192,10 +192,11 @@ func main() {
 ````
 #### Creating new HTTPSpanner options
 
-(1) Make a new field in the HTTPSpanner struct and a httpspanner container for options that require specific parts.  
-(2) Create a option in httpspanneroptions.go
-(3) Create a new process in httpspannerprocess.go
-(4) Implement the newly created option and process into spanner's Decorate. 
+(1) Create a option in httpspanneroptions.go\
+(2) Make a new field in the HTTPSpanner struct and a httpspanner container. Containers\
+    hold required component for its option\
+(3) Create a new process in httpspannerprocess.go.\ 
+(4) Implement the newly created option and process into spanner's Decorate.
 
 #### How is Money data interpreted?
 

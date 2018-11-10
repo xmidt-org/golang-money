@@ -36,28 +36,26 @@ func (hs *HTTPSpanner) Start(ctx context.Context, s *Span) *HTTPTracker {
 }
 
 // Decorate provides an Alice-style decorator for handlers that wish to use money
-//
-// Currently this does not take into the account MoneySpan headers.
 func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if ok := checkHeaderForMoneyTrace(request.Header); ok {
 			switch {
 			case hs.sb.function != nil:
-				htTracker, result, err := SubTracerProcess(request.Context(), hs, request)
+				htTracker, err := SubTracerProcess(request.Context(), hs, request)
 				if err != nil {
 					next.ServeHTTP(response, request)
 				}
 
-				rw := &simpleResponseWriter{
+				rw := simpleResponseWriter{
 					code:           http.StatusOK,
 					ResponseWriter: response,
 				}
 
-				rw.WriteMoneySpansHeader(result)
+				request = InjectTracker(request, htTracker)
 
-				next.ServeHTTP(rw, InjectTracker(request, htTracker))
+				next.ServeHTTP(rw, request)
 			case hs.st.function != nil:
-				htTracker, result, err := StarterProcess(request.Context(), hs, request)
+				htTracker, err := StarterProcess(request.Context(), hs, request)
 				if err != nil {
 					next.ServeHTTP(response, request)
 				}
@@ -67,11 +65,11 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 					ResponseWriter: response,
 				}
 
-				rw.WriteMoneySpansHeader(result)
+				request = InjectTracker(request, htTracker)
 
-				next.ServeHTTP(rw, InjectTracker(request, htTracker))
+				next.ServeHTTP(rw, request)
 			case hs.ed.function != nil:
-				htTracker, result, err := EnderProcess(request.Context(), hs, request)
+				htTracker, err := EnderProcess(request.Context(), hs, request)
 				if err != nil {
 					next.ServeHTTP(response, request)
 				}
@@ -81,9 +79,9 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 					ResponseWriter: response,
 				}
 
-				rw.WriteMoneySpansHeader(result)
+				request = InjectTracker(request, htTracker)
 
-				next.ServeHTTP(rw, InjectTracker(request, htTracker))
+				next.ServeHTTP(rw, request)
 			case hs.s:
 				next.ServeHTTP(response, request)
 			}

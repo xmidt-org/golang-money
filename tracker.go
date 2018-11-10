@@ -203,13 +203,15 @@ func (t *HTTPTracker) DecorateTransactor(transactor Transactor, options ...SpanF
 		r.Header.Set(MoneyHeader, encodeTraceContext(t.span.TC))
 		t.m.RUnlock()
 
-		if resp, e = transactor(InjectTracker(r, t)); e == nil {
+		if resp, e = transactor(r); e == nil {
 			t.m.Lock()
 			defer t.m.Unlock()
 
 			t.storeMoneySpans(resp.Header)
 
 			//options allow converting different span types into money-compatible ones
+			//
+			// TODO: I believe this is necessary for talaria responses due to websockets.
 			for _, o := range options {
 				t.spansList = append(t.spansList, o(resp)...)
 			}

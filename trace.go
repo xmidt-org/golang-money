@@ -25,6 +25,11 @@ type TraceContext struct {
 	PID int64  //Parent ID
 }
 
+// DecodeTraceContext decodes a trace context from a header.
+func DecodeTraceContext(raw string) (tc *TraceContext, err error) {
+	return decodeTraceContext(raw)
+}
+
 // decodeTraceContext returns a TraceContext from the given value "raw"
 // raw is typically taken directly from http.Request headers
 // for now, it is overly strict with the expected format
