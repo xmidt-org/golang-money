@@ -57,6 +57,10 @@ func WriteSpansHeaderTr1d1um(r Result, w http.ResponseWriter, resp http.Response
 	return w
 }
 
+func CheckHeaderForMoneyTrace(h http.Header) bool {
+	return checkHeaderForMoneyTrace(h)
+}
+
 // checkHeaderForMoneySpan checks if a http header contains a MoneyHeader
 func checkHeaderForMoneyTrace(h http.Header) bool {
 	_, ok := h[MoneyHeader]
