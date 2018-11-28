@@ -30,8 +30,8 @@ type simpleResponseWriter struct {
 	code int
 }
 
-// WriteMoneySpansHeader writes a finished span's results to a simpleReponseWriter
-func (rw simpleResponseWriter) WriteMoneySpansHeader(r Result) {
+// WriteMoneySpansHeader writes a finished span's results to a responseWriter's header.
+func WriteMoneySpansHeader(r Result, rw http.ResponseWriter) {
 	var o = new(bytes.Buffer)
 
 	h := rw.Header()
@@ -73,7 +73,7 @@ func CheckHeaderForMoneySpan(h http.Header) bool {
 
 // checkHeaderForMoneySpan checks if a http header contains a MoneySpansHeader
 func checkHeaderForMoneySpan(h http.Header) bool {
-	_, ok := h[MoneySpansHeader]
+	err, ok := h[MoneySpansHeader]
 	return ok
 }
 
