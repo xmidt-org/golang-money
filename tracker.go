@@ -199,7 +199,6 @@ func (t *HTTPTracker) SpansMap() (spansMap []SpanMap, err error) {
 func (t *HTTPTracker) DecorateTransactor(transactor Transactor, options ...SpanForwardingOptions) Transactor {
 	return func(r *http.Request) (resp *http.Response, e error) {
 		t.m.RLock()
-		// TODO: ensure that the last trace context is different then the current before setting a requests header. Subtrace has had to occur here .
 		r.Header.Set(MoneyHeader, encodeTraceContext(t.span.TC))
 		t.m.RUnlock()
 
@@ -209,9 +208,8 @@ func (t *HTTPTracker) DecorateTransactor(transactor Transactor, options ...SpanF
 
 			t.storeMoneySpans(resp.Header)
 
-			//options allow converting different span types into money-compatible ones
+			// options allow converting different span types into money-compatible ones
 			//
-			// TODO: I believe this is necessary for talaria responses due to websockets.
 			for _, o := range options {
 				t.spansList = append(t.spansList, o(resp)...)
 			}
