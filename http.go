@@ -94,6 +94,21 @@ func InjectTracker(request *http.Request, ht *HTTPTracker) *http.Request {
 	return request.WithContext(ctx)
 }
 
+// getMoneyTraceHeader grabs a money header from an http span.
+func getMoneyTraceHeader(h http.Header) string {
+	value := h.Get(MoneyHeader)
+	if len(value) == 0 {
+		return nil
+	}
+
+	b, err := strconv.ParseBool(value)
+	if err != nil {
+		panic(err)
+	}
+
+	return &b
+}
+
 /*
 // Writes all spans made under this tracker to response header
 func CompleteList(ht *HTTPTracker, w http.ResponseWriter) http.ResponseWriter {
