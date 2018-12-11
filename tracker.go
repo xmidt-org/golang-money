@@ -50,7 +50,7 @@ type Tracker interface {
 	SpansList() ([]string, error)
 
 	// DecorateTransactor provides a strategy to inspect transactor arguments and outputs
-	DecorateTransactor(Transactor, ...SpanForwardingOptions) Transactor
+	DecorateTransactor(Transactor) Transactor
 
 	// HTTPTracker returns a http tracker object.
 	HTTPTracker() *HTTPTracker
@@ -196,7 +196,7 @@ func (t *HTTPTracker) SpansMap() (spansMap []SpanMap, err error) {
 }
 
 // DecorateTransactor provides a path for specific HTTPTracker behavior given a span forwarding option.
-func (t *HTTPTracker) DecorateTransactor(transactor Transactor, options ...SpanForwardingOptions) Transactor {
+func (t *HTTPTracker) DecorateTransactor(transactor Transactor) Transactor {
 	return func(r *http.Request) (resp *http.Response, e error) {
 		t.m.RLock()
 		r.Header.Set(MoneyHeader, encodeTraceContext(t.span.TC))
@@ -207,13 +207,6 @@ func (t *HTTPTracker) DecorateTransactor(transactor Transactor, options ...SpanF
 			defer t.m.Unlock()
 
 			t.storeMoneySpans(resp.Header)
-
-			// options allow converting different span types into money-compatible ones
-			//
-			for _, o := range options {
-				t.spansList = append(t.spansList, o(resp)...)
-			}
-
 		}
 		return
 	}
@@ -232,6 +225,14 @@ func (t *HTTPTracker) storeMoneySpans(h http.Header) {
 // Returns a HTTPTracker object.
 func (t *HTTPTracker) HTTPTracker() *HTTPTracker {
 	return t
+}
+
+func (t *HTTPTracker) Switch() {
+	if t.done {
+		t.done = false
+	} else if !t.done {
+		t.done = true
+	}
 }
 
 // TrackerFromContext extracts a tracker contained in a given context.

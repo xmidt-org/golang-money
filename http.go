@@ -41,7 +41,7 @@ func WriteMoneySpansHeader(r Result, rw http.ResponseWriter) {
 	o.WriteString(r.String())
 	o.WriteString(";response-code=" + strconv.Itoa(rw.code))
 	o.WriteString(fmt.Sprintf(";success=" + strconv.FormatBool(success)))
-	h.Set(MoneySpansHeader, o.String())
+	h.Add(MoneySpansHeader, o.String())
 }
 
 // WriteSpansHeader results spanned headers to be used in Tr1d1um Encoding
@@ -94,11 +94,12 @@ func InjectTracker(request *http.Request, ht *HTTPTracker) *http.Request {
 	return request.WithContext(ctx)
 }
 
+/*
 // getMoneyTraceHeader grabs a money header from an http span.
 func getMoneyTraceHeader(h http.Header) string {
 	value := h.Get(MoneyHeader)
 	if len(value) == 0 {
-		return nil
+		return
 	}
 
 	b, err := strconv.ParseBool(value)
@@ -108,6 +109,7 @@ func getMoneyTraceHeader(h http.Header) string {
 
 	return &b
 }
+*\
 
 /*
 // Writes all spans made under this tracker to response header
