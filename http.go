@@ -28,8 +28,9 @@ type simpleResponseWriter struct {
 	http.ResponseWriter
 	code int
 }
+
 /*
-//TODO: 
+//TODO:
 func RunMoney(ctx context.Context, statusCode int) error {
 	tracker, ok := money.TrackerFromContext(ctx)
 	if ok {
@@ -41,7 +42,7 @@ func RunMoney(ctx context.Context, statusCode int) error {
 		money.WriteMoneySpansHeader(result, w, deviceResponseModel.StatusCode)
 	}
 
-	return nil 
+	return nil
 }
 */
 
@@ -75,7 +76,7 @@ func CheckHeaderForMoneySpan(h http.Header) bool {
 
 // checkHeaderForMoneySpan checks if a http header contains a MoneySpansHeader
 func checkHeaderForMoneySpan(h http.Header) bool {
-	err, ok := h[MoneySpansHeader]
+	_, ok := h[MoneySpansHeader]
 	return ok
 }
 
@@ -95,33 +96,3 @@ func InjectTracker(request *http.Request, ht *HTTPTracker) *http.Request {
 	ctx := context.WithValue(request.Context(), contextKeyTracker, ht)
 	return request.WithContext(ctx)
 }
-
-/*
-// getMoneyTraceHeader grabs a money header from an http span.
-func getMoneyTraceHeader(h http.Header) string {
-	value := h.Get(MoneyHeader)
-	if len(value) == 0 {
-		return
-	}
-
-	b, err := strconv.ParseBool(value)
-	if err != nil {
-		panic(err)
-	}
-
-	return &b
-}
-*\
-
-/*
-// Writes all spans made under this tracker to response header
-func CompleteList(ht *HTTPTracker, w http.ResponseWriter) http.ResponseWriter {
-	list, err := tracker.SpansList()
-	w.Header().Set("X-Money-Spans")
-	for i, list := range list {
-		w.Header().Add("X-Money-Spans", list[i])
-	}
-
-	return w
-}
-*
