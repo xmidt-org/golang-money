@@ -13,7 +13,6 @@ import (
 // MoneyHeaders holds a trace context of a span and are how nodes recognize
 // if a Money trace needs to continue.
 // MoneySpansHeaders hold the result of a finished span.
-// TODO: Add Parent Span Header.
 const (
 	MoneyHeader      = "X-Money-Trace"
 	MoneySpansHeader = "X-Money-Spans"
@@ -31,30 +30,17 @@ type simpleResponseWriter struct {
 }
 
 // WriteMoneySpansHeader writes a finished span's results to a responseWriter's header.
-func WriteMoneySpansHeader(r Result, rw http.ResponseWriter) {
+func WriteMoneySpansHeader(r Result, rw http.ResponseWriter, code int) {
 	var o = new(bytes.Buffer)
 
 	h := rw.Header()
 
-	success := rw.code < 400
+	success := code < 400
 
 	o.WriteString(r.String())
-	o.WriteString(";response-code=" + strconv.Itoa(rw.code))
+	o.WriteString(";response-code=" + strconv.Itoa(code))
 	o.WriteString(fmt.Sprintf(";success=" + strconv.FormatBool(success)))
 	h.Add(MoneySpansHeader, o.String())
-}
-
-// WriteSpansHeader results spanned headers to be used in Tr1d1um Encoding
-func WriteSpansHeaderTr1d1um(r Result, w http.ResponseWriter, resp http.Response) http.ResponseWriter {
-	var o = new(bytes.Buffer)
-	// success := w.code < 400
-
-	o.WriteString(r.String())
-	//	o.WriteString(";response-code=" + strconv.Itoa(resp.code))
-	//o.WriteString(fmt.Sprintf(";success=" + strconv.FormatBool(success)))
-	w.Header().Set(MoneySpansHeader, o.String())
-
-	return w
 }
 
 func CheckHeaderForMoneyTrace(h http.Header) bool {
@@ -122,4 +108,4 @@ func CompleteList(ht *HTTPTracker, w http.ResponseWriter) http.ResponseWriter {
 
 	return w
 }
-*/
+*
