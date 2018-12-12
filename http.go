@@ -28,6 +28,22 @@ type simpleResponseWriter struct {
 	http.ResponseWriter
 	code int
 }
+/*
+//TODO: 
+func RunMoney(ctx context.Context, statusCode int) error {
+	tracker, ok := money.TrackerFromContext(ctx)
+	if ok {
+		result, err := tracker.Finish()
+		if err != nil {
+			return err
+		}
+
+		money.WriteMoneySpansHeader(result, w, deviceResponseModel.StatusCode)
+	}
+
+	return nil 
+}
+*/
 
 // WriteMoneySpansHeader writes a finished span's results to a responseWriter's header.
 func WriteMoneySpansHeader(r Result, rw http.ResponseWriter, code int) {
