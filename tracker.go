@@ -235,6 +235,11 @@ func (t *HTTPTracker) Switch() {
 	}
 }
 
+// UpdateMaps updates the spans maps.  Used when handling device spans.
+func (t *HTTPTracker) UpdateMaps(maps map[string]string) {
+	t.spansMaps = maps
+}
+
 // TrackerFromContext extracts a tracker contained in a given context.
 func TrackerFromContext(ctx context.Context) (*HTTPTracker, bool) {
 	t, ok := ctx.Value(contextKeyTracker).(*HTTPTracker)
