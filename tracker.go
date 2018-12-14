@@ -41,10 +41,10 @@ type Tracker interface {
 	String() (string, error)
 
 	// Map provides the representation the map span representation of the managed span.
-	Map() (SpanMap, error)
+	Map() (map[string]string, error)
 
 	// Spans returns a list of string-encoded spans in a map fashion.
-	SpansMap() ([]SpanMap, error)
+	SpansMap() ([]map[string]string, error)
 
 	// Spans returns a list of string-encoded Money spans that have been created under this tracker
 	SpansList() ([]string, error)
@@ -68,7 +68,7 @@ type HTTPTracker struct {
 	spansList []string
 
 	// spansMaps contains span maps of all spans created under this tracker
-	spansMaps []SpanMap
+	spansMaps []map[string]string
 
 	// indicates whether the span associated with this tracker is finished
 	done bool
@@ -153,7 +153,7 @@ func (t *HTTPTracker) String() (v string, err error) {
 
 // SpansMap returns the map representation of the span associated with this
 // HTTPTracker once such span has finished, zero value otherwise.
-func (t *HTTPTracker) Map() (v SpanMap, err error) {
+func (t *HTTPTracker) Map() (v map[string]string, err error) {
 	t.m.Lock()
 	defer t.m.Unlock()
 
@@ -182,12 +182,12 @@ func (t *HTTPTracker) SpansList() (spansList []string, err error) {
 
 // SpansMaps returns the list of span map objects under this tracker
 // once the main span under the tracker is finished, zero value otherwise.
-func (t *HTTPTracker) SpansMap() (spansMap []SpanMap, err error) {
+func (t *HTTPTracker) SpansMap() (spansMap []map[string]string, err error) {
 	t.m.RLock()
 	defer t.m.RUnlock()
 
 	if t.done {
-		spansMaps := make([]SpanMap, len(t.spansMaps))
+		spansMaps := make([]map[string]string, len(t.spansMaps))
 		copy(spansMaps, t.spansMaps)
 		return spansMaps, nil
 	}

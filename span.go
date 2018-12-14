@@ -79,10 +79,8 @@ func NewSpan(spanName string, tc *TraceContext) *Span {
 	}
 }
 
-type SpanMap map[string]string
-
 // Changes a maps values to type string.
-func mapFieldToString(m map[string]interface{}) SpanMap {
+func mapFieldToString(m map[string]interface{}) map[string]string {
 	n := make(map[string]string)
 
 	for k, v := range m {
@@ -112,7 +110,7 @@ func mapFieldToString(m map[string]interface{}) SpanMap {
 }
 
 // Map returns a string map representation of the span
-func (s *Span) Map() SpanMap {
+func (s *Span) Map() map[string]string {
 	var m map[string]interface{}
 
 	// Receive a map of string to objects
