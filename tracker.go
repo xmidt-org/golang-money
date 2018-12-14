@@ -236,7 +236,7 @@ func (t *HTTPTracker) Switch() {
 }
 
 // UpdateMaps updates the spans maps.  Used when handling device spans.
-func (t *HTTPTracker) UpdateMaps(maps map[string]string) {
+func (t *HTTPTracker) UpdateMaps(maps []map[string]string) {
 	t.spansMaps = maps
 }
 
