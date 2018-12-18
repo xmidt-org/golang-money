@@ -46,42 +46,27 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 					next.ServeHTTP(response, request)
 				}
 
-				rw := simpleResponseWriter{
-					code:           http.StatusOK,
-					ResponseWriter: response,
-				}
-
 				request = InjectTracker(request, htTracker)
 
-				next.ServeHTTP(rw, request)
+				next.ServeHTTP(response, request)
 			case hs.st.function != nil:
 				htTracker, err := StarterProcess(request.Context(), hs, request)
 				if err != nil {
 					next.ServeHTTP(response, request)
 				}
 
-				rw := simpleResponseWriter{
-					code:           http.StatusOK,
-					ResponseWriter: response,
-				}
-
 				request = InjectTracker(request, htTracker)
 
-				next.ServeHTTP(rw, request)
+				next.ServeHTTP(response, request)
 			case hs.ed.function != nil:
 				htTracker, err := EnderProcess(request.Context(), hs, request)
 				if err != nil {
 					next.ServeHTTP(response, request)
 				}
 
-				rw := simpleResponseWriter{
-					code:           http.StatusOK,
-					ResponseWriter: response,
-				}
-
 				request = InjectTracker(request, htTracker)
 
-				next.ServeHTTP(rw, request)
+				next.ServeHTTP(response, request)
 			case hs.s:
 				next.ServeHTTP(response, request)
 			}

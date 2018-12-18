@@ -23,12 +23,6 @@ const (
 	sIDKey = "span-id"
 )
 
-// simpleResponseWriter is the core decorated http.ResponseWriter
-type simpleResponseWriter struct {
-	http.ResponseWriter
-	code int
-}
-
 // WriteMoneySpansHeader writes a finished span's results to a responseWriter's header.
 func WriteMoneySpansHeader(r Result, rw http.ResponseWriter, code interface{}) {
 	var o = new(bytes.Buffer)
