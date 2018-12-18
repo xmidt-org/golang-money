@@ -62,7 +62,7 @@ func WriteMoneySpansHeader(r Result, rw http.ResponseWriter, code interface{}) {
 		o.WriteString(";response-code=" + strconv.Itoa(code))
 	case int64:
 		m, _ := i.(*int64)
-		o.WriteString(";response-code=" + strconv.ParseInt(&code))
+		o.WriteString(";response-code=" + strconv.ParseInt(code, 10, 64))
 	}
 
 	o.WriteString(fmt.Sprintf(";success=" + strconv.FormatBool(success)))
