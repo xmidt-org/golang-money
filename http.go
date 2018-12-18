@@ -35,18 +35,21 @@ func WriteMoneySpansHeader(r Result, rw http.ResponseWriter, code interface{}) {
 
 	h := rw.Header()
 
-	success := code < 400
 	o.WriteString(r.String())
-	switch v := code.(type) {
+	switch code.(type) {
 	case int:
-		m, _ := i.(int)
-		o.WriteString(";response-code=" + strconv.Itoa(code))
+		c := code.(int)
+		o.WriteString(";response-code=" + strconv.Itoa(c))
+		success := c < 400
+		o.WriteString(fmt.Sprintf(";success=" + strconv.FormatBool(success)))
 	case int64:
-		m, _ := i.(*int64)
-		o.WriteString(";response-code=" + strconv.ParseInt(code, 10, 64))
+		i := code.(*int64)
+		c := int(*i)
+		o.WriteString(";response-code=" + strconv.Itoa(c))
+		success := c < 400
+		o.WriteString(fmt.Sprintf(";success=" + strconv.FormatBool(success)))
 	}
 
-	o.WriteString(fmt.Sprintf(";success=" + strconv.FormatBool(success)))
 	h.Add(MoneySpansHeader, o.String())
 }
 
