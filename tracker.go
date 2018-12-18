@@ -237,7 +237,12 @@ func (t *HTTPTracker) Switch() {
 
 // UpdateMaps updates the spans maps.  Used when handling device spans.
 func (t *HTTPTracker) UpdateMaps(maps []map[string]string) {
-	t.spansMaps = maps
+	t.spansMaps[len(t.spansMaps)-1] = maps[len(maps)-1]
+}
+
+// UpdateMaps gets the spans maps.  Used when handling talaria and device span bridge.
+func (t *HTTPTracker) GetMaps() []map[string]string {
+	return t.spansMaps
 }
 
 // TrackerFromContext extracts a tracker contained in a given context.
