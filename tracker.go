@@ -228,6 +228,9 @@ func (t *HTTPTracker) HTTPTracker() *HTTPTracker {
 }
 
 func (t *HTTPTracker) Switch() {
+	t.m.RLock()
+	defer t.m.RUnlock()
+
 	if t.done {
 		t.done = false
 	} else if !t.done {
@@ -237,6 +240,9 @@ func (t *HTTPTracker) Switch() {
 
 // UpdateMaps updates the spans maps.  Used when handling device spans.
 func (t *HTTPTracker) UpdateMaps(maps []map[string]string) {
+	t.m.RLock()
+	defer t.m.RUnlock()
+
 	t.spansMaps[len(t.spansMaps)-1] = maps[len(maps)-1]
 }
 
@@ -247,6 +253,9 @@ func (t *HTTPTracker) GetMaps() []map[string]string {
 
 // UpdateSpan updaets the span of a device.  Its specifically used to add spans to a device's tracker.
 func (t *HTTPTracker) UpdateSpan(m map[string]string) {
+	t.m.RLock()
+	defer t.m.RUnlock()
+
 	t.span, _ = BuildSpanFromMap(m)
 }
 
