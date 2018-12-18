@@ -19,8 +19,10 @@ package money
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -165,4 +167,76 @@ func (r *Result) String() string {
 	o.WriteString(";span-duration=" + r.Duration.String())
 
 	return o.String()
+}
+
+// BuildSpanFromMap builds a http span from a tracker
+func BuildSpanFromMap(t map[string]string) (*Span, error) {
+	span := new(Span)
+	//span.TC = t["TC"]
+
+	// TODO: all possible error codes or alternate route.
+	if t["Code"] == "400" {
+		span.Code = 400
+	} else {
+		span.Code = 401
+	}
+
+	if t["Success"] == "false" {
+		span.Success = false
+	} else {
+		span.Success = true
+	}
+
+	start, err := time.Parse(t["StartTime"], "2011-01-19")
+	if err != nil {
+		return nil, err
+	}
+
+	span.StartTime = start
+	duration, err := parseTime(t["Duration"])
+	if err != nil {
+		return nil, err
+	}
+
+	span.Duration = duration
+
+	span.Name = t["Name"]
+	span.AppName = t["AppName"]
+	span.Err = errors.New(t["Err"])
+	span.Host = t["Host"]
+
+	return span, nil
+}
+
+func parseTime(t string) (time.Duration, error) {
+	var mins, hours int
+	var err error
+
+	parts := strings.SplitN(t, ":", 2)
+
+	switch len(parts) {
+	case 1:
+		mins, err = strconv.Atoi(parts[0])
+		if err != nil {
+			return 0, err
+		}
+	case 2:
+		hours, err = strconv.Atoi(parts[0])
+		if err != nil {
+			return 0, err
+		}
+
+		mins, err = strconv.Atoi(parts[1])
+		if err != nil {
+			return 0, err
+		}
+	default:
+		return 0, fmt.Errorf("invalid time: %s", t)
+	}
+
+	if mins > 59 || mins < 0 || hours > 23 || hours < 0 {
+		return 0, fmt.Errorf("invalid time: %s", t)
+	}
+
+	return time.Duration(hours)*time.Hour + time.Duration(mins)*time.Minute, nil
 }

@@ -64,16 +64,6 @@ func EnderON() HTTPSpannerOptions {
 	}
 }
 
-// RedirectorON is an option to use the decorator as a redirector.
-func RedirectorON() HTTPSpannerOptions {
-	return func(hs *HTTPSpanner) {
-		hs.st = StarterContainer{}
-		hs.sb = SubTracerContainer{}
-		hs.ed = EnderContainer{}
-		hs.s = false
-	}
-}
-
 // SpannerOFF turns off all of HTTPSpanner's possible states.
 // TODO: this could removed by changing the logic in the httpspanner struct
 func SpannerOFF() HTTPSpannerOptions {

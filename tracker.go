@@ -245,6 +245,11 @@ func (t *HTTPTracker) GetMaps() []map[string]string {
 	return t.spansMaps
 }
 
+// UpdateSpan updaets the span of a device.  Its specifically used to add spans to a device's tracker.
+func (t *HTTPTracker) UpdateSpan(m map[string]string) {
+	t.span, _ = BuildSpanFromMap(m)
+}
+
 // TrackerFromContext extracts a tracker contained in a given context.
 func TrackerFromContext(ctx context.Context) (*HTTPTracker, bool) {
 	t, ok := ctx.Value(contextKeyTracker).(*HTTPTracker)
