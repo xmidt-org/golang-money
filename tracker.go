@@ -198,8 +198,8 @@ func (t *HTTPTracker) SpansMap() (spansMap []map[string]string, err error) {
 func (t *HTTPTracker) DecorateTransactor(transactor Transactor) Transactor {
 	return func(r *http.Request) (resp *http.Response, err error) {
 		if ok := checkHeaderForMoneyTrace(r.Header); ok {
-			t.m.RLock()
-			defer t.m.RUnlock()
+			//	t.m.RLock()
+			//	defer t.m.RUnlock()
 
 			r.Header.Set(MoneyHeader, encodeTraceContext(t.span.TC))
 
