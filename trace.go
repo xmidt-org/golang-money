@@ -106,6 +106,10 @@ func typeInferenceTC(tc interface{}) string {
 
 // EncodeTraceContext encodes the TraceContext into a string.
 func encodeTraceContext(tc *TraceContext) string {
+	if tc == nil {
+		return ""
+	}
+
 	return fmt.Sprintf("%s=%v;%s=%v;%s=%v", pIDKey, tc.PID, sIDKey, tc.SID, tIDKey, tc.TID)
 }
 

@@ -13,7 +13,7 @@ type Process func(ctx context.Context, hs *HTTPSpanner, r *http.Request) (*HTTPT
 
 // SubTracerProcess is SubTracer's derivation path.
 func SubTracerProcess(ctx context.Context, hs *HTTPSpanner, r *http.Request) (*HTTPTracker, error) {
-	tracker, err := hs.sb.function(r)
+	tracker, err := hs.subtracer(r)
 	if err != nil {
 		return nil, errTrackerHasNotBeenInjected
 	}
@@ -30,7 +30,7 @@ func SubTracerProcess(ctx context.Context, hs *HTTPSpanner, r *http.Request) (*H
 
 // StarterProcess is Starter's derivation path.
 func StarterProcess(ctx context.Context, hs *HTTPSpanner, r *http.Request) (*HTTPTracker, error) {
-	span, err := hs.st.function(r)
+	span, err := hs.starter(r)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func StarterProcess(ctx context.Context, hs *HTTPSpanner, r *http.Request) (*HTT
 
 // EnderProcess is Ender's derivation path.
 func EnderProcess(ctx context.Context, hs *HTTPSpanner, r *http.Request) (*HTTPTracker, error) {
-	tracker, err := hs.ed.function(r)
+	tracker, err := hs.ender(r)
 	if err != nil {
 		return nil, errTrackerHasNotBeenInjected
 	}

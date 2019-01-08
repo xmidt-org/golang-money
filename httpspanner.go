@@ -9,21 +9,15 @@ import (
 //
 // Future created spanner options go here.
 type HTTPSpanner struct {
-	sb SubTracerContainer
-	st StarterContainer
-	ed EnderContainer
-	s  bool
+	subtracer SubTracer
+	starter   Starter
+	ender     Ender
+	state     bool
 }
 
 // Creates new http Spanner by extracting spanner off of request.
-// see https://commandcenter.blogspot.com/2014/01/self-referential-functions-and-design.html
-// for more details.
-func NewHTTPSpanner(options ...HTTPSpannerOptions) *HTTPSpanner {
+func NewHTTPSpanner(options HTTPSpannerOptions) *HTTPSpanner {
 	hs := new(HTTPSpanner)
-
-	for _, o := range options {
-		o(hs)
-	}
 
 	return hs
 }
@@ -40,7 +34,7 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if ok := checkHeaderForMoneyTrace(request.Header); ok {
 			switch {
-			case hs.sb.function != nil:
+			case hs.subtracer != nil:
 				htTracker, err := SubTracerProcess(request.Context(), hs, request)
 				if err != nil {
 					next.ServeHTTP(response, request)
@@ -49,7 +43,7 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 				request = InjectTracker(request, htTracker)
 
 				next.ServeHTTP(response, request)
-			case hs.st.function != nil:
+			case hs.starter != nil:
 				htTracker, err := StarterProcess(request.Context(), hs, request)
 				if err != nil {
 					next.ServeHTTP(response, request)
@@ -58,7 +52,7 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 				request = InjectTracker(request, htTracker)
 
 				next.ServeHTTP(response, request)
-			case hs.ed.function != nil:
+			case hs.ender != nil:
 				htTracker, err := EnderProcess(request.Context(), hs, request)
 				if err != nil {
 					next.ServeHTTP(response, request)
@@ -67,7 +61,7 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 				request = InjectTracker(request, htTracker)
 
 				next.ServeHTTP(response, request)
-			case hs.s:
+			case hs.state:
 				next.ServeHTTP(response, request)
 			}
 		} else {

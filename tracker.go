@@ -30,7 +30,6 @@ type Transactor func(*http.Request) (*http.Response, error)
 
 // Tracker is the management interface for an active span.
 type Tracker interface {
-
 	// Create a new child span given a request's context and prior span's trace context
 	SubTrace(context.Context, HTTPSpanner) (*HTTPTracker, error)
 
@@ -197,29 +196,42 @@ func (t *HTTPTracker) SpansMap() (spansMap []map[string]string, err error) {
 
 // DecorateTransactor provides a path for specific HTTPTracker behavior given a span forwarding option.
 func (t *HTTPTracker) DecorateTransactor(transactor Transactor) Transactor {
-	return func(r *http.Request) (resp *http.Response, e error) {
-		t.m.RLock()
-		r.Header.Set(MoneyHeader, encodeTraceContext(t.span.TC))
-		t.m.RUnlock()
+	return func(r *http.Request) (resp *http.Response, err error) {
+		if ok := checkHeaderForMoneyTrace(r.Header); ok {
+			t.m.RLock()
+			r.Header.Set(MoneyHeader, encodeTraceContext(t.span.TC))
+			t.m.RUnlock()
 
-		if resp, e = transactor(r); e == nil {
-			t.m.Lock()
-			defer t.m.Unlock()
+			if resp, err = transactor(r); err == nil {
+				t.m.Lock()
+				defer t.m.Unlock()
 
-			t.storeMoneySpans(resp.Header)
+				t.storeMoneySpans(resp.Header)
+			}
+			return
+		} else {
+			if resp, err = transactor(r); err == nil {
+				t.m.Lock()
+				defer t.m.Unlock()
+
+				t.storeMoneySpans(resp.Header)
+			}
+			return
 		}
-		return
 	}
 }
 
 // storeMoneySpans adds a responses money spans to a HTTPTracker objects spansList
 func (t *HTTPTracker) storeMoneySpans(h http.Header) {
+
 	for k, vs := range h {
 		if k == MoneySpansHeader {
 			t.spansList = append(t.spansList, vs...)
 			return
 		}
 	}
+
+	return
 }
 
 // Returns a HTTPTracker object.
