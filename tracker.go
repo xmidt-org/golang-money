@@ -199,21 +199,16 @@ func (t *HTTPTracker) DecorateTransactor(transactor Transactor) Transactor {
 	return func(r *http.Request) (resp *http.Response, err error) {
 		if ok := checkHeaderForMoneyTrace(r.Header); ok {
 			t.m.RLock()
+			defer t.m.RUnlock()
+
 			r.Header.Set(MoneyHeader, encodeTraceContext(t.span.TC))
-			t.m.RUnlock()
 
 			if resp, err = transactor(r); err == nil {
-				t.m.Lock()
-				defer t.m.Unlock()
-
 				t.storeMoneySpans(resp.Header)
 			}
 			return
 		} else {
 			if resp, err = transactor(r); err == nil {
-				t.m.Lock()
-				defer t.m.Unlock()
-
 				t.storeMoneySpans(resp.Header)
 			}
 			return
