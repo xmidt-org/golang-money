@@ -3,6 +3,7 @@ package money
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"sync"
@@ -197,11 +198,14 @@ func (t *HTTPTracker) SpansMap() (spansMap []map[string]string, err error) {
 // DecorateTransactor provides a path for specific HTTPTracker behavior given a span forwarding option.
 func (t *HTTPTracker) DecorateTransactor(transactor Transactor) Transactor {
 	return func(r *http.Request) (resp *http.Response, err error) {
+		fmt.Print(1)
 		if ok := checkHeaderForMoneyTrace(r.Header); ok {
 			//	t.m.RLock()
 			//	defer t.m.RUnlock()
 
+			fmt.Print(3)
 			r.Header.Set(MoneyHeader, encodeTraceContext(t.span.TC))
+			fmt.Print(4)
 
 			if resp, err = transactor(r); err == nil {
 				t.storeMoneySpans(resp.Header)

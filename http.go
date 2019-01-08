@@ -80,6 +80,7 @@ func CheckHeaderForMoneySpan(h http.Header) bool {
 }
 
 func checkHeaderForMoneySpan(h http.Header) bool {
+	fmt.Print(2)
 	_, ok := h[MoneySpansHeader]
 	return ok
 }
