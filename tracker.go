@@ -197,6 +197,7 @@ func (t *HTTPTracker) SpansMap() (spansMap []map[string]string, err error) {
 
 // DecorateTransactor provides a path for specific HTTPTracker behavior given a span forwarding option.
 func (t *HTTPTracker) DecorateTransactor(transactor Transactor) Transactor {
+	fmt.Print(1)
 	return func(r *http.Request) (resp *http.Response, err error) {
 		fmt.Print(1)
 		if ok := checkHeaderForMoneyTrace(r.Header); ok {
