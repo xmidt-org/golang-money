@@ -156,7 +156,6 @@ func (s *Span) String() string {
 
 // String returns the string representation of the result.
 func (r *Result) String() string {
-
 	var o = new(bytes.Buffer)
 
 	o.WriteString("span-name=" + r.Name)

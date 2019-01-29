@@ -64,23 +64,43 @@ func InjectTracker(request *http.Request, ht *HTTPTracker) *http.Request {
 	return request.WithContext(ctx)
 }
 
-// CheckHeaderForMoneyTrace checks if a http header contains a MoneyTrace
 func CheckHeaderForMoneyTrace(h http.Header) bool {
-	return checkHeaderForMoneyTrace(h)
-}
-
-func checkHeaderForMoneyTrace(h http.Header) bool {
 	_, ok := h[MoneyHeader]
 	return ok
 }
 
-// CheckHeaderForMoneySpan checks if a http header contains a MoneySpansHeader
 func CheckHeaderForMoneySpan(h http.Header) bool {
-	return checkHeaderForMoneySpan(h)
-}
-
-func checkHeaderForMoneySpan(h http.Header) bool {
-	fmt.Print(2)
 	_, ok := h[MoneySpansHeader]
 	return ok
 }
+
+// checkForTrackerInContext checks if a context contains a tracker
+func CheckForTrackerInContext(ctx context.Context) bool {
+	_, ok := ctx.Value(contextKeyTracker).(*HTTPTracker)
+	return ok
+}
+
+// MapsToStringResult returns the a string of all the traces created under this tracker
+func MapsToStringResult(m []map[string]string) string {
+	var o = new(bytes.Buffer)
+	for _, v := range m {
+		for k, x := range v {
+			o.WriteString(k + "=" + x + ";")
+		}
+	}
+
+	return o.String()
+}
+
+/*
+// NewMoneyResponseHeader clears the reponse header and injects money
+func NewMoneyResponse(r *http.Response,          ) *http.Response {
+	moneyResponse := response
+	for k := range moneyResponse.Header {
+		delete(m, k)
+	}
+
+	ctx := context.WithValue(request.Context(), contextKeyTracker, ht)
+	return request.WithContext(ctx)
+}
+*/
