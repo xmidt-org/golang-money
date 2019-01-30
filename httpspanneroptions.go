@@ -16,7 +16,7 @@ type Ender func(*http.Request) (*HTTPTracker, error)
 // subTracer extracts a tracker from a request's context. Its used
 // in the subtracer option when there already exists a tracker to subtrace from.
 func subTracer(r *http.Request) (*HTTPTracker, error) {
-	return ExtractTracker(r)
+	return ExtractTrackerFromRequest(r)
 }
 
 // starter decodes money headers off a request. Its used

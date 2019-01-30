@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-type Client interface {
+type DecoratedClient interface {
 	Transact(*http.Request) (*http.Response, error)
 }
 
@@ -16,26 +16,50 @@ func NewTransactors(options TransactorOptions) *Transactors {
 	return t
 }
 
-// Decorator is a function that decorates Clients
-type Decorator func(Client) Client
-
 // Transactors embeds Transactor Interface to allow any type.
 type Transactors struct {
-	tr1d1umDec Decorator
-	scytaleDec Decorator
+	Tr1d1umDec DecoratedClient
+	ScytaleDec DecoratedClient
 }
 
-func (t *Transactors) DecorateTransactor(c Client) Client {
+type Transactor func(*http.Request) (*http.Response, error)
+
+type TransactorOptions func(*Transactors)
+
+// DecorateTransactor decorates basic transactors.
+func DecorateTransactor(t Transactor) Transactor {
+	return func(r *http.Request) (*http.Response, error) {
+		tracker, err := ExtractTrackerFromRequest(r)
+		if err == nil {
+			if resp, err := t(r); err == nil {
+				return resp, nil
+			}
+		}
+
+		r = SetRequestMoneyHeader(tracker, r)
+		if resp, err := t(r); err == nil {
+			tracker, err := ExtractTrackerFromResponse(resp)
+			_, err = tracker.Finish()
+			if err != nil {
+				return nil, err
+			}
+
+			return resp, nil
+		}
+
+		return nil, err
+	}
+}
+
+/*
+func (t *Transactors) DecorateTransactor(c DecoratedClient) DecoratedClient {
 	switch {
-	case t.tr1d1umDec != nil:
-		return t.tr1d1umDec(c)
-	case t.scytaleDec != nil:
-		return t.scytaleDec(c)
+	case t.Tr1d1umDec != nil:
+		return t.Tr1d1umDec(c)
+	case t.ScytaleDec != nil:
+		return t.ScytaleDec(c)
 	}
 
 	return nil
 }
-
-// TransactorOptions used to declare DecorateTransactors state by adjusting a
-// structs field
-type TransactorOptions func(*Transactors)
+*/

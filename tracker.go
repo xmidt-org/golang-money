@@ -13,9 +13,10 @@ import (
 var (
 	errTrackerNotFinished = errors.New("Tracker should have not yet finished")
 	// As of now the only method that changes a http trackers field, done, is Finish
-	errTrackerAlreadyFinished       = errors.New("Tracker needs to be finished to utilize this function")
-	errRequestDoesNotContainTracker = errors.New("Tracker does not contain tracker")
-	errTrackerHasNotBeenInjected    = errors.New("Tracker has not been injected")
+	errTrackerAlreadyFinished        = errors.New("Tracker needs to be finished to utilize this function")
+	errRequestDoesNotContainTracker  = errors.New("Request does not contain tracker")
+	errResponseDoesNotContainTracker = errors.New("Response does not contain tracker")
+	errTrackerHasNotBeenInjected     = errors.New("Tracker has not been injected")
 )
 
 type contextKey int
@@ -104,8 +105,6 @@ func (t *HTTPTracker) Finish() (Result, error) {
 	defer t.m.Unlock()
 
 	if !t.done {
-		t.span.Host, _ = os.Hostname()
-		t.span.AppName = os.Args[0]
 		t.span.Duration = time.Since(t.span.StartTime)
 		//	t.span.Code = //TODO get span code
 		t.span.Success = t.span.Code < 400
@@ -257,7 +256,7 @@ func (t *HTTPTracker) UpdateSpan(m map[string]string) {
 }
 
 // TrackerFromContext extracts a tracker contained in a given context.
-func trackerFromContext(ctx context.Context) (*HTTPTracker, bool) {
+func TrackerFromContext(ctx context.Context) (*HTTPTracker, bool) {
 	t, ok := ctx.Value(contextKeyTracker).(*HTTPTracker)
 	return t.HTTPTracker(), ok
 }

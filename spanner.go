@@ -7,7 +7,7 @@ import (
 
 // Spanner is an interface which represents different ways spanning occurs.
 type Spanner interface {
-	ServerDecorator(context.Context, *HTTPSpanner, http.Handler, *http.Request, MoneyContainer) http.Handler
+	ServerDecorator(context.Context, *HTTPSpanner, http.Handler, *http.Request, http.ResponseWriter) http.Handler
 }
 
 // MoneyContainer holds the minimum primitives to complete money spans for all servers scytale, talaria, petasos,
@@ -15,11 +15,11 @@ type Spanner interface {
 //
 // talaria is a special case that needs use of a channel
 type MoneyContainer interface {
-	ServerDecorator(context.Context, http.Handler, *http.Request) http.Handler
+	ServerDecorator(context.Context, *HTTPSpanner, http.Handler, *http.Request, http.ResponseWriter) http.Handler
 }
 
 // ServerDecorator a function signature for server decorators
-type ServerDecorator func(context.Context, http.Handler, *http.Request, MoneyContainer) http.Handler
+type ServerDecorator func(context.Context, *HTTPSpanner, http.Handler, *http.Request, http.ResponseWriter) http.Handler
 
 // HTTPSpanner implements a Spanner and its future possible options.
 //
@@ -55,8 +55,7 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 					next.ServeHTTP(response, request)
 				}
 
-				request = InjectTracker(request, htTracker)
-
+				request = InjectTrackerIntoRequest(request, htTracker)
 				next.ServeHTTP(response, request)
 			case hs.Scytale != nil:
 				htTracker, err := SubTracerProcess(request.Context(), hs, request)
@@ -64,12 +63,11 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 					next.ServeHTTP(response, request)
 				}
 
-				request = InjectTracker(request, htTracker)
-
+				request = InjectTrackerIntoRequest(request, htTracker)
 				next.ServeHTTP(response, request)
 			case hs.Talaria.ServerDecorator != nil:
-				handler := hs.Talaria.ServerDecorator(request.Context(), next, request)
-
+				// instead of simply decorating the next handler, the next handler is executed in a go routine.
+				handler := hs.Talaria.ServerDecorator(request.Context(), hs, next, request, response)
 				handler.ServeHTTP(response, request)
 			}
 		}

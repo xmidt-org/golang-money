@@ -48,8 +48,18 @@ func WriteMoneySpansHeader(r Result, rw http.ResponseWriter, code interface{}) {
 }
 
 // ExtractTracker extracts a tracker cotained in a given request.
-func ExtractTracker(request *http.Request) (*HTTPTracker, error) {
-	val := request.Context().Value(contextKeyTracker)
+func ExtractTrackerFromResponse(response *http.Response) (*HTTPTracker, error) {
+	val := response.Request.Context().Value(contextKeyTracker)
+	t, ok := val.(*HTTPTracker)
+	if !ok {
+		return nil, errResponseDoesNotContainTracker
+	}
+
+	return t.HTTPTracker(), nil
+}
+
+func ExtractTrackerFromRequest(req *http.Request) (*HTTPTracker, error) {
+	val := req.Context().Value(contextKeyTracker)
 	t, ok := val.(*HTTPTracker)
 	if !ok {
 		return nil, errRequestDoesNotContainTracker
@@ -58,8 +68,14 @@ func ExtractTracker(request *http.Request) (*HTTPTracker, error) {
 	return t.HTTPTracker(), nil
 }
 
+func InjectTrackerIntoResponse(response *http.Response, ht *HTTPTracker) *http.Response {
+	ctx := context.WithValue(response.Request.Context(), contextKeyTracker, ht)
+	response.Request = response.Request.WithContext(ctx)
+	return response
+}
+
 // InjectTracker injects a tracker into a request.
-func InjectTracker(request *http.Request, ht *HTTPTracker) *http.Request {
+func InjectTrackerIntoRequest(request *http.Request, ht *HTTPTracker) *http.Request {
 	ctx := context.WithValue(request.Context(), contextKeyTracker, ht)
 	return request.WithContext(ctx)
 }
@@ -90,6 +106,17 @@ func MapsToStringResult(m []map[string]string) string {
 	}
 
 	return o.String()
+}
+
+func SetRequestMoneyHeader(t *HTTPTracker, r *http.Request) *http.Request {
+	r.Header.Set(MoneyHeader, EncodeTraceContext(t.span.TC))
+	return r
+}
+
+func SetResponseMoneyHeader(t *HTTPTracker, h http.Header) http.Header {
+	t.storeMoneySpans(h)
+
+	return h
 }
 
 /*

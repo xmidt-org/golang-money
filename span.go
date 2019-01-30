@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -75,9 +76,12 @@ type Result struct {
 
 // NewSpan returns a new span instance.
 func NewSpan(spanName string, tc *TraceContext) *Span {
+	h, _ := os.Hostname()
 	return &Span{
-		Name: spanName,
-		TC:   tc,
+		Name:    spanName,
+		TC:      tc,
+		Host:    h,
+		AppName: os.Args[0],
 	}
 }
 
