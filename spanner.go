@@ -72,6 +72,8 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 				handler := hs.Talaria.ServerDecorator(request.Context(), hs, next, request, response)
 				handler.ServeHTTP(response, request)
 			}
+		} else {
+			next.ServeHTTP(response, request)
 		}
 	})
 }
