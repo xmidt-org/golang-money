@@ -27,6 +27,7 @@ type ServerDecorator func(context.Context, *HTTPSpanner, http.Handler, *http.Req
 type HTTPSpanner struct {
 	Tr1d1um Starter
 	Scytale SubTracer
+	Petasos SubTracer
 	Talaria MoneyContainer
 }
 
@@ -38,19 +39,12 @@ func NewHTTPSpanner(options HTTPSpannerOptions) *HTTPSpanner {
 	return hs
 }
 
-// Start defines the start time of the input span s and returns
-// a http tracker which can both start a child span using SubTrace
-// as well as mark the end of a span using s
-func (hs *HTTPSpanner) Start(ctx context.Context, s *Span) *HTTPTracker {
-	return NewHTTPTracker(ctx, s, hs)
-}
-
 func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if ok := CheckHeaderForMoneyTrace(request.Header); ok {
 			switch {
 			case hs.Tr1d1um != nil:
-				htTracker, err := StarterProcess(request.Context(), hs, request)
+				htTracker, err := StarterProcessTr1d1um(request.Context(), hs, request)
 				if err != nil {
 					next.ServeHTTP(response, request)
 				}
@@ -58,7 +52,15 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 				request = InjectTrackerIntoRequest(request, htTracker)
 				next.ServeHTTP(response, request)
 			case hs.Scytale != nil:
-				htTracker, err := SubTracerProcess(request.Context(), hs, request)
+				htTracker, err := SubTracerProcessScytale(request.Context(), hs, request)
+				if err != nil {
+					next.ServeHTTP(response, request)
+				}
+
+				request = InjectTrackerIntoRequest(request, htTracker)
+				next.ServeHTTP(response, request)
+			case hs.Petasos != nil:
+				htTracker, err := SubTracerProcessPetasos(request.Context(), hs, request)
 				if err != nil {
 					next.ServeHTTP(response, request)
 				}
@@ -72,4 +74,11 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 			}
 		}
 	})
+}
+
+// Start defines the start time of the input span s and returns
+// a http tracker which can both start a child span using SubTrace
+// as well as mark the end of a span using s
+func (hs *HTTPSpanner) start(ctx context.Context, s *Span) *HTTPTracker {
+	return NewHTTPTracker(ctx, s, hs)
 }

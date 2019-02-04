@@ -27,6 +27,8 @@ type Transactor func(*http.Request) (*http.Response, error)
 type TransactorOptions func(*Transactors)
 
 // DecorateTransactor decorates basic transactors.
+//
+// In the xmidt ecosystem scytale is the only node that uses a normal transactor.
 func DecorateTransactor(t Transactor) Transactor {
 	return func(r *http.Request) (*http.Response, error) {
 		tracker, err := ExtractTrackerFromRequest(r)
@@ -39,7 +41,7 @@ func DecorateTransactor(t Transactor) Transactor {
 		r = SetRequestMoneyHeader(tracker, r)
 		if resp, err := t(r); err == nil {
 			tracker, err := ExtractTrackerFromResponse(resp)
-			_, err = tracker.Finish()
+			err = tracker.Finish()
 			if err != nil {
 				return nil, err
 			}

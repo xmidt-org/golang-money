@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 )
@@ -31,8 +30,8 @@ type Tracker interface {
 	// Create a new child span given a request's context and prior span's trace context
 	SubTrace(context.Context, HTTPSpanner) (*HTTPTracker, error)
 
-	// Finish concludes this span with the given result
-	Finish() (Result, error)
+	// Finish concludes this span by completing the it spent alive.
+	Finish() error
 
 	// String provides the string representation of the managed span
 	String() (string, error)
@@ -100,7 +99,7 @@ func (t *HTTPTracker) SubTrace(ctx context.Context, sp *HTTPSpanner) (*HTTPTrack
 
 // Finish is an idempotent operation that marks the end of the underlying HTTPTracker by adding appending spans maps and spans list as well as
 // returning a Span's contents as a Result object.
-func (t *HTTPTracker) Finish() (Result, error) {
+func (t *HTTPTracker) Finish() error {
 	t.m.Lock()
 	defer t.m.Unlock()
 
@@ -113,19 +112,10 @@ func (t *HTTPTracker) Finish() (Result, error) {
 		t.spansMaps = append(t.spansMaps, t.span.Map())
 		t.done = true
 
-		return Result{
-			Name:      t.span.Name,
-			TC:        encodeTraceContext(t.span.TC),
-			AppName:   os.Args[0],
-			Code:      t.span.Code,
-			Success:   t.span.Success,
-			Err:       t.span.Err,
-			StartTime: t.span.StartTime,
-			Duration:  t.span.Duration,
-			Host:      t.span.Host,
-		}, nil
+		// TODO: get rid of result field, may need to migrate encodeTraceContext upward
+		return nil
 	} else {
-		return Result{}, errTrackerAlreadyFinished
+		return errTrackerAlreadyFinished
 	}
 }
 

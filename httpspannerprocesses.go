@@ -12,20 +12,22 @@ import (
 type Process func(ctx context.Context, hs *HTTPSpanner, r *http.Request) (*HTTPTracker, error)
 
 // StarterProcess is Starter's derivation path.
-func StarterProcess(ctx context.Context, hs *HTTPSpanner, r *http.Request) (*HTTPTracker, error) {
+//
+// Tr1d1um by default it needs to start the span due to where customer's request enter.
+func StarterProcessTr1d1um(ctx context.Context, hs *HTTPSpanner, r *http.Request) (*HTTPTracker, error) {
 	span, err := hs.Tr1d1um(r)
 	if err != nil {
 		return nil, err
 	}
 
-	tracker := hs.Start(r.Context(), span)
-	htTracker := tracker.HTTPTracker()
-
-	return htTracker, nil
+	tracker := hs.start(r.Context(), span)
+	return tracker.HTTPTracker(), nil
 }
 
 // SubTracerProcess is SubTracer's derivation path.
-func SubTracerProcess(ctx context.Context, hs *HTTPSpanner, r *http.Request) (*HTTPTracker, error) {
+//
+// Downstream nodes who subtrace include: scytale, petasos, talaria, and parados.
+func SubTracerProcessScytale(ctx context.Context, hs *HTTPSpanner, r *http.Request) (*HTTPTracker, error) {
 	tracker, err := hs.Scytale(r)
 	if err != nil {
 		return nil, errTrackerHasNotBeenInjected
@@ -36,7 +38,19 @@ func SubTracerProcess(ctx context.Context, hs *HTTPSpanner, r *http.Request) (*H
 		return nil, err
 	}
 
-	htTracker := tracker.HTTPTracker()
+	return tracker.HTTPTracker(), nil
+}
 
-	return htTracker, nil
+func SubTracerProcessPetasos(ctx context.Context, hs *HTTPSpanner, r *http.Request) (*HTTPTracker, error) {
+	tracker, err := hs.Scytale(r)
+	if err != nil {
+		return nil, errTrackerHasNotBeenInjected
+	}
+
+	tracker, err = tracker.SubTrace(r.Context(), hs)
+	if err != nil {
+		return nil, err
+	}
+
+	return tracker.HTTPTracker(), nil
 }

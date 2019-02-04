@@ -32,20 +32,36 @@ func starter(r *http.Request) (*Span, error) {
 	return s, err
 }
 
-// SubTracerON is an option to use the decorator as a subtracer.
+// Currently there are four different states the spanner can be configured to.
+// ScytaleON, PetasosON, Tr1d1umON, and TalariaON.  Currently TalariaON is in the
+// device package.
+
+// ScytaleON is an option to use the decorator for Scytale.
 func ScytaleON() HTTPSpannerOptions {
 	return func(hs *HTTPSpanner) {
 		hs.Tr1d1um = nil
 		hs.Scytale = subTracer
+		hs.Petasos = nil
 		hs.Talaria = nil
 	}
 }
 
-// StarterON is an option to use the decorator as a starter.
+// PetasosON is an option to use the decorator for Petasos.
+func PetasosON() HTTPSpannerOptions {
+	return func(hs *HTTPSpanner) {
+		hs.Tr1d1um = nil
+		hs.Scytale = nil
+		hs.Petasos = subTracer
+		hs.Talaria = nil
+	}
+}
+
+// StarterON is an option to use the decorator for Tr1d1um
 func Tr1d1umON() HTTPSpannerOptions {
 	return func(hs *HTTPSpanner) {
 		hs.Tr1d1um = starter
 		hs.Scytale = nil
+		hs.Petasos = nil
 		hs.Talaria = nil
 	}
 }
