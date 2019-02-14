@@ -2,6 +2,7 @@ package money
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 )
 
@@ -28,11 +29,14 @@ type HTTPSpanner struct {
 	Tr1d1um Starter
 	Scytale SubTracer
 	Petasos SubTracer
-	Talaria MoneyContainer
+	Talaria SubTracer
 }
 
 func NewHTTPSpanner(options HTTPSpannerOptions) *HTTPSpanner {
 	hs := new(HTTPSpanner)
+	if options == nil {
+		return hs
+	}
 
 	options(hs)
 
@@ -67,10 +71,31 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 
 				request = InjectTrackerIntoRequest(request, htTracker)
 				next.ServeHTTP(response, request)
-			case hs.Talaria.ServerDecorator != nil:
-				// instead of simply decorating the next handler, the next handler is executed in a go routine.
-				handler := hs.Talaria.ServerDecorator(request.Context(), hs, next, request, response)
-				handler.ServeHTTP(response, request)
+			case hs.Talaria != nil:
+				tracker, err := hs.Talaria(request)
+				if err != nil {
+					next.ServeHTTP(response, request)
+				}
+
+				tracker, err = tracker.SubTrace(request.Context(), hs)
+				if err != nil {
+					next.ServeHTTP(response, request)
+				}
+
+				next.ServeHTTP(response, request)
+				defer func() {
+					tracker, err := ExtractTrackerFromRequest(request)
+					if err != nil {
+						fmt.Print(err)
+					}
+
+					err = tracker.Finish()
+					if err != nil {
+						fmt.Print(err)
+					}
+
+					request = InjectTrackerIntoRequest(request, tracker)
+				}()
 			}
 		} else {
 			next.ServeHTTP(response, request)

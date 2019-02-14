@@ -78,6 +78,30 @@ func NewHTTPTracker(ctx context.Context, s *Span, sp *HTTPSpanner) *HTTPTracker 
 	}
 }
 
+// BuildRawTracker builds a tracker from a map[string]string and makes it's
+// spans maps present.
+//
+// This case is needed when a tracker is sent from a device to talaria
+func BuildRawTracker(m map[string]string) (*HTTPTracker, error) {
+	var (
+		t = new(HTTPTracker)
+		l []map[string]string
+	)
+
+	// update the spans history in the trackers, maps
+	l = append(l, m)
+	t.updateMaps(l)
+
+	span, err := buildSpanFromMap(m)
+	if err != nil {
+		return nil, err
+	}
+
+	t = t.trackerFromSpan(span)
+	t.updateMaps(l)
+	return t, nil
+}
+
 // SubTrace starts a child span from the given span s.   A child span's paramount attribute
 // is it's trace context, TC,  due to a span's span-id/SID uniqueness.
 func (t *HTTPTracker) SubTrace(ctx context.Context, sp *HTTPSpanner) (*HTTPTracker, error) {
@@ -213,36 +237,23 @@ func (t *HTTPTracker) HTTPTracker() *HTTPTracker {
 	return t
 }
 
-func (t *HTTPTracker) Switch() {
+// UpdateMaps updates the spans maps.
+func (t *HTTPTracker) updateMaps(i interface{}) {
 	t.m.RLock()
 	defer t.m.RUnlock()
 
-	if t.done {
-		t.done = false
-	} else if !t.done {
-		t.done = true
+	switch i.(type) {
+	case map[string]string:
+		t.spansMaps = append(t.spansMaps, i.(map[string]string))
+	case []map[string]string:
+		t.spansMaps = i.([]map[string]string)
 	}
 }
 
-// UpdateMaps updates the spans maps.  Used when handling device spans.
-func (t *HTTPTracker) UpdateMaps(maps []map[string]string) {
-	t.m.RLock()
-	defer t.m.RUnlock()
-
-	t.spansMaps[len(t.spansMaps)-1] = maps[len(maps)-1]
-}
-
-// UpdateMaps gets the spans maps.  Used when handling talaria and device span bridge.
-func (t *HTTPTracker) GetMaps() []map[string]string {
-	return t.spansMaps
-}
-
-// UpdateSpan updaets the span of a device.  Its specifically used to add spans to a device's tracker.
-func (t *HTTPTracker) UpdateSpan(m map[string]string) {
-	t.m.RLock()
-	defer t.m.RUnlock()
-
-	t.span, _ = BuildSpanFromMap(m)
+func (t *HTTPTracker) trackerFromSpan(s *Span) *HTTPTracker {
+	return &HTTPTracker{
+		span: s,
+	}
 }
 
 // TrackerFromContext extracts a tracker contained in a given context.

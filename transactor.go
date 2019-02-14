@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-type DecoratedClient interface {
+type Client interface {
 	Transact(*http.Request) (*http.Response, error)
 }
 
@@ -23,8 +23,6 @@ type Transactors struct {
 }
 
 type Transactor func(*http.Request) (*http.Response, error)
-
-type TransactorOptions func(*Transactors)
 
 // DecorateTransactor decorates basic transactors.
 //

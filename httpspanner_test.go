@@ -34,28 +34,13 @@ func testNewHTTPSpannerNil(t *testing.T) {
 }
 
 func testStart(t *testing.T) {
-	var spanner = NewHTTPSpanner()
-	if spanner.Start(context.Background(), &Span{}) == nil {
+	var spanner = NewHTTPSpanner(nil)
+	if spanner.start(context.Background(), &Span{}) == nil {
 		t.Error("was expecting a non-nil response")
 	}
 }
 
-/*
-func TestDecorateOff(t *testing.T) {
-	var spanner = NewHTTPSpanner(SpannerOff())
-
-	handler := http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			_, ok := TrackerFromContext(r.Context())
-			if ok {
-				t.Error("Tracker should not have been injected")
-			}
-		})
-	decorated := spanner.Decorate(handler)
-	decorated.ServeHTTP(nil, httptest.NewRequest("GET", "localhost:9090/test", nil))
-}
-*/
-
+// Test non-edge spans
 func TestDecorateSubTracerON(t *testing.T) {
 	var (
 		mockTC = &TraceContext{
@@ -72,7 +57,7 @@ func TestDecorateSubTracerON(t *testing.T) {
 		mockHT = &HTTPTracker{
 			span: mockSpan,
 		}
-		spanner = NewHTTPSpanner(SubTracerON())
+		spanner = NewHTTPSpanner(ScytaleON())
 	)
 
 	handler := http.HandlerFunc(
@@ -89,13 +74,14 @@ func TestDecorateSubTracerON(t *testing.T) {
 	inputRequest.Header.Add(MoneyHeader, "trace-id=abc;parent-id=1;span-id=1")
 
 	var r = httptest.NewRecorder()
-	decorated.ServeHTTP(r, InjectTracker(inputRequest, mockHT))
+	decorated.ServeHTTP(r, InjectTrackerIntoRequest(inputRequest, mockHT))
 
 }
 
+// Tests edge server spans
 func TestDecorateStarterON(t *testing.T) {
 	var (
-		spanner = NewHTTPSpanner(StarterON())
+		spanner = NewHTTPSpanner(Tr1d1umON())
 	)
 
 	handler := http.HandlerFunc(
@@ -112,38 +98,4 @@ func TestDecorateStarterON(t *testing.T) {
 	inputRequest.Header.Add(MoneyHeader, "trace-id=abc;parent-id=1;span-id=1")
 	var r = httptest.NewRecorder()
 	decorated.ServeHTTP(r, inputRequest)
-}
-
-func TestDecorateEnderON(t *testing.T) {
-	var (
-		mockTC = &TraceContext{
-			PID: 1,
-			SID: 1,
-			TID: "1",
-		}
-
-		mockSpan = &Span{
-			Name: "spantest",
-			TC:   mockTC,
-		}
-
-		mockHT = &HTTPTracker{
-			span: mockSpan,
-		}
-		spanner = NewHTTPSpanner(EnderON())
-	)
-	handler := http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			_, ok := TrackerFromContext(r.Context())
-			if !ok {
-				t.Error("Expected tracker to be present")
-			}
-
-		})
-
-	decorated := spanner.Decorate(handler)
-	inputRequest := httptest.NewRequest("GET", "localhost:9090/test", nil)
-	inputRequest.Header.Add(MoneyHeader, "trace-id=abc;parent-id=1;span-id=1")
-	var r = httptest.NewRecorder()
-	decorated.ServeHTTP(r, InjectTracker(inputRequest, mockHT))
 }

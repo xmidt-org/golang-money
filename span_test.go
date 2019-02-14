@@ -82,7 +82,7 @@ func TestMapFieldToString(t *testing.T) {
 
 	var actual = mapFieldToString(m)
 
-	var expected = SpanMap{
+	var expected = map[string]string{
 		"Name":      "test-span",
 		"AppName":   "test-app",
 		"TC":        "parent-id=1;span-id=1;trace-id=test-trace",
@@ -113,7 +113,7 @@ func TestMap(t *testing.T) {
 
 	sm := s.Map()
 
-	var expected = SpanMap{
+	var expected = map[string]string{
 		"Name":      "test-span",
 		"AppName":   "test-app",
 		"TC":        "parent-id=1;span-id=1;trace-id=test-trace",
@@ -126,6 +126,29 @@ func TestMap(t *testing.T) {
 	}
 
 	assert.Equal(t, expected, sm)
+}
+
+func FuncBuildSpanFromMap(t *testing.T) {
+	var (
+		duration = Duration(12)
+		//times = []string{    ,    ,      }
+		m = map[string]string{
+			"Name":      "test-span",
+			"AppName":   "test-app",
+			"TC":        "parent-id=1;span-id=1;trace-id=test-trace",
+			"Success":   "true",
+			"Code":      "1",
+			"Duration":  fmt.Sprintf("%v"+"ns", duration.Nanoseconds()),
+			"StartTime": startTime.Format("2006-01-02T15:04:05.999999999Z07:00"),
+			"Err":       "Error",
+			"Host":      "localhost",
+		}
+	)
+
+	span, err := buildSpanFromMap(m)
+	if err != nil {
+		t.Errorf(err)
+	}
 }
 
 /*

@@ -3,9 +3,11 @@ package money
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 /*
@@ -42,9 +44,31 @@ func TestNewHTTPTracker(t *testing.T) {
 	)
 
 	assert.Equal(t, expected, ht)
-
 }
 */
+
+func TestBuildRawTracker(t *testing.T) {
+	var (
+		duration  = time.Duration(12)
+		startTime = time.Now()
+		m         = map[string]string{
+			"Name":      "bill",
+			"AppName":   "scytale",
+			"TC":        "parent-id=1;span-id=1;trace-id=test-trace",
+			"Success":   "True",
+			"Code":      "200",
+			"Err":       "Error",
+			"Duration":  fmt.Sprintf("%v"+"ns", duration.Nanoseconds()),
+			"StartTime": startTime.Format("2006-01-02T15:04:05.999999999Z07:00"),
+			"Host":      "localhost",
+		}
+	)
+
+	_, err := BuildRawTracker(m)
+	if err != nil {
+		t.Error(err)
+	}
+}
 
 func TestSubTraceDone(t *testing.T) {
 	var (
@@ -125,7 +149,7 @@ func TestFinishDone(t *testing.T) {
 		}
 	)
 
-	_, err := mockHT.Finish()
+	err := mockHT.Finish()
 	if err != errTrackerAlreadyFinished {
 		t.Fatalf("Tracker should not be done")
 		return
@@ -151,7 +175,7 @@ func TestFinishNotDone(t *testing.T) {
 		}
 	)
 
-	_, err := mockHT.Finish()
+	err := mockHT.Finish()
 	if err == errTrackerAlreadyFinished {
 		t.Fatalf("Tracker should be done")
 		return

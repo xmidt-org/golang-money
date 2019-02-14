@@ -44,36 +44,6 @@ type Span struct {
 	Host      string
 }
 
-// Result models the result fields of a span.
-type Result struct {
-	// Name of the Span (i.e HTTPHandler)
-	Name string
-
-	// Start Time
-	TC string
-
-	// Name of the application/service running the Span (i.e. Scytale in XMiDT)
-	AppName string
-
-	// StartTime
-
-	// Code is an abstract value which is up to the span code to supply.
-	// It is not necessary to enforce that this is an HTTP status code.
-	// The translation into an HTTP status code should take place elsewhere.
-	Code int
-
-	// Whether or not this span is defined as "successful"
-	Success bool
-
-	Err error
-
-	StartTime time.Time
-
-	Duration time.Duration
-
-	Host string
-}
-
 // NewSpan returns a new span instance.
 func NewSpan(spanName string, tc *TraceContext) *Span {
 	h, _ := os.Hostname()
@@ -159,6 +129,7 @@ func (s *Span) String() string {
 }
 
 // String returns the string representation of the result.
+/*
 func (r *Result) String() string {
 	var o = new(bytes.Buffer)
 
@@ -171,9 +142,10 @@ func (r *Result) String() string {
 
 	return o.String()
 }
+*/
 
 // BuildSpanFromMap builds a http span from a tracker
-func BuildSpanFromMap(t map[string]string) (*Span, error) {
+func buildSpanFromMap(t map[string]string) (*Span, error) {
 	span := new(Span)
 	//span.TC = t["TC"]
 
@@ -190,7 +162,7 @@ func BuildSpanFromMap(t map[string]string) (*Span, error) {
 		span.Success = true
 	}
 
-	start, err := time.Parse(t["StartTime"], "2011-01-19")
+	start, err := time.Parse("MM/DD/YYYY", t["StartTime"])
 	if err != nil {
 		return nil, err
 	}
@@ -211,12 +183,15 @@ func BuildSpanFromMap(t map[string]string) (*Span, error) {
 	return span, nil
 }
 
+// this needs error handling when their does not exist that split.
 func parseTime(t string) (time.Duration, error) {
-	var mins, hours int
-	var err error
+	var (
+		mins, hours int
+		err         error
+	)
 
+	fmt.Print(1)
 	parts := strings.SplitN(t, ":", 2)
-
 	switch len(parts) {
 	case 1:
 		mins, err = strconv.Atoi(parts[0])

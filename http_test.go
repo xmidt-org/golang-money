@@ -2,15 +2,14 @@ package money
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/davecgh/go-spew/spew"
+	"github.com/stretchr/testify/assert"
 )
 
+/*
 func NewMockResult() Result {
 	var (
 		startTime = time.Now()
@@ -29,12 +28,13 @@ func NewMockResult() Result {
 		Host:      "test",
 	}
 }
+*/
 
 func TestCheckHeaderForMoneyTrace(t *testing.T) {
 	var r = httptest.NewRequest("GET", "localhost:9090/test", nil)
 	r.Header.Set(MoneyHeader, "test")
 
-	var ok = checkHeaderForMoneyTrace(r.Header)
+	var ok = CheckHeaderForMoneyTrace(r.Header)
 	if !ok {
 		t.Fatalf("should contain money header")
 	}
@@ -45,12 +45,13 @@ func TestCheckHeaderForMoneySpan(t *testing.T) {
 	var r = httptest.NewRequest("GET", "localhost:9090/test", nil)
 	r.Header.Set(MoneySpansHeader, "test")
 
-	var ok = checkHeaderForMoneySpan(r.Header)
+	var ok = CheckHeaderForMoneySpan(r.Header)
 	if !ok {
 		t.Fatalf("should contain money span header")
 	}
 }
 
+/*
 func TestWriteMoneySpanHeader(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		var mockResponseWriter = simpleResponseWriter{
@@ -67,15 +68,16 @@ func TestWriteMoneySpanHeader(t *testing.T) {
 	handler(w, req)
 
 	var resp = w.Result()
-	var ok = checkHeaderForMoneySpan(resp.Header)
+	var ok = CheckHeaderForMoneySpan(resp.Header)
 	spew.Dump(resp.Header)
 	if !ok {
 		spew.Dump(resp.Header)
 		t.Fatalf("should contain Money span header")
 	}
 }
+*/
 
-func TestExtractTracker(t *testing.T) {
+func TestExtractTrackerFromRequest(t *testing.T) {
 	var (
 		mockTC = &TraceContext{
 			PID: 1,
@@ -95,7 +97,7 @@ func TestExtractTracker(t *testing.T) {
 
 	handler := http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			_, err := ExtractTracker(r)
+			_, err := ExtractTrackerFromRequest(r)
 			if err != nil {
 				t.Error("Expected tracker to be present")
 			}
@@ -111,7 +113,7 @@ func TestExtractTracker(t *testing.T) {
 	handler.ServeHTTP(nil, r)
 }
 
-func TestInjectTracker(t *testing.T) {
+func TestInjectTrackerIntoRequest(t *testing.T) {
 	var (
 		mockTC = &TraceContext{
 			PID: 1,
@@ -131,7 +133,7 @@ func TestInjectTracker(t *testing.T) {
 
 	handler := http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			_, err := ExtractTracker(r)
+			_, err := ExtractTrackerFromRequest(r)
 			if err != nil {
 				t.Error("Expected tracker to be present")
 			}
@@ -140,5 +142,21 @@ func TestInjectTracker(t *testing.T) {
 
 	r := httptest.NewRequest("GET", "localhost:9090/test", nil)
 
-	handler.ServeHTTP(nil, InjectTracker(r, mockHT))
+	handler.ServeHTTP(nil, InjectTrackerIntoRequest(r, mockHT))
+}
+
+func TestMapsToStringResult(t *testing.T) {
+	var (
+		m        = map[string]string{"Time": "14:00", "Day": "Monday", "Month": "October"}
+		expected = "Time=14:00;Day=Monday;Month=October;"
+		maps     []map[string]string
+	)
+
+	maps = append(maps, m)
+	result := MapsToStringResult(maps)
+	ok := assert.Equal(t, expected, result)
+	if !ok {
+		t.Errorf("result, '%s\n', does not equal expected, '%s'", result, expected)
+	}
+
 }

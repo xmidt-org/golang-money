@@ -3,9 +3,7 @@ package money
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"net/http"
-	"strconv"
 )
 
 // Header keys
@@ -24,6 +22,7 @@ const (
 )
 
 // WriteMoneySpansHeader writes a finished span's results to a responseWriter's header.
+/*
 func WriteMoneySpansHeader(r Result, rw http.ResponseWriter, code interface{}) {
 	var o = new(bytes.Buffer)
 
@@ -46,6 +45,7 @@ func WriteMoneySpansHeader(r Result, rw http.ResponseWriter, code interface{}) {
 
 	h.Add(MoneySpansHeader, o.String())
 }
+*/
 
 // ExtractTracker extracts a tracker cotained in a given request.
 func ExtractTrackerFromResponse(response *http.Response) (*HTTPTracker, error) {
