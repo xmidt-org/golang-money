@@ -4,7 +4,10 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"runtime/debug"
 	"testing"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 type MockResponse struct {
@@ -37,6 +40,82 @@ func testStart(t *testing.T) {
 	var spanner = NewHTTPSpanner(nil)
 	if spanner.start(context.Background(), &Span{}) == nil {
 		t.Error("was expecting a non-nil response")
+	}
+}
+
+func TestDecorateTr1d1umON(t *testing.T) {
+	var (
+		mockTC = &TraceContext{
+			PID: 1,
+			SID: 1,
+			TID: "1",
+		}
+
+		mockSpan = &Span{
+			Name: "spantest",
+			TC:   mockTC,
+		}
+
+		mockHT = &HTTPTracker{
+			span: mockSpan,
+		}
+		spanner = NewHTTPSpanner(Tr1d1umON())
+	)
+
+	handler := http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			_, ok := TrackerFromContext(r.Context())
+			if !ok {
+				t.Error("Expected tracker to be present")
+			}
+		})
+
+	decorated := spanner.Decorate(handler)
+	inputRequest := httptest.NewRequest("GET", "localhost:9090/test", nil)
+	inputRequest.Header.Add(MoneyHeader, "trace-id=abc;parent-id=1;span-id=1")
+
+	var r = httptest.NewRecorder()
+	decorated.ServeHTTP(r, InjectTrackerIntoRequest(inputRequest, mockHT))
+
+}
+
+// Tests to see if
+func TestWritesToResponseWriter(t *testing.T) {
+	var (
+		mockTC = &TraceContext{
+			PID: 1,
+			SID: 1,
+			TID: "1",
+		}
+
+		mockSpan = &Span{
+			Name: "spantest",
+			TC:   mockTC,
+		}
+
+		mockHT = &HTTPTracker{
+			span: mockSpan,
+		}
+		spanner = NewHTTPSpanner(Tr1d1umON())
+	)
+
+	handler := http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+		})
+
+	decorated := spanner.Decorate(handler)
+	inputRequest := httptest.NewRequest("GET", "localhost:9090/test", nil)
+	inputRequest.Header.Add(MoneyHeader, "trace-id=abc;parent-id=1;span-id=1")
+
+	var r = httptest.NewRecorder()
+	decorated.ServeHTTP(r, InjectTrackerIntoRequest(inputRequest, mockHT))
+
+	spew.Dump(r)
+	t.Log(string(debug.Stack()))
+
+	if r == nil {
+		t.Errorf("Wrong Response Writer- got %v",
+			spew.Sprint(r))
 	}
 }
 

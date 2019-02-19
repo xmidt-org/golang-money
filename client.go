@@ -1,6 +1,7 @@
 package money
 
 import (
+	"log"
 	"net/http"
 )
 
@@ -8,57 +9,81 @@ type client interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-type Options struct{
+type Options struct {
 	Finish bool
 }
 
 type moneyClient struct {
-	client
 	finish bool
+	client
+	moneyLog       log.Logger
+	responseWriter http.ResponseWriter
+}
+
+// TODO: implement this. pipeReq pipes the request's headers into the response writer
+func pipeReq(rw http.ResponseWriter, resp *http.Request) {
+	rw.Header().Set(MoneySpansHeader, resp.Header.Get(MoneySpansHeader))
 }
 
 func NewMoneyTransactor(o *Options) moneyClient {
-	return moneyClient{finish: o.Options}
+	return moneyClient{finish: o.Finish}
 }
 
 func (mc moneyClient) Do(request *http.Request) (*http.Response, error) {
-	tracker, err := ExtractTrackerFromRequest(resp)
-	if err == nil {
-		request = InjectTrackerIntoRequest(SetRequestMoneyHeader(tracker, request))
+	tracker, err := ExtractTrackerFromRequest(request)
+	if err != nil {
+		resp, err := mc.client.Do(request)
+		if err != nil {
+			return nil, err
+		}
+		return resp, nil
 	}
 
-	resp, err := mc.Client.Do(request)
+	// set the request's MoneyHeader with a new trace
+	request = SetRequestMoneyHeader(tracker, request)
+	resp, err := mc.client.Do(request)
 	if err != nil {
 		return nil, err
 	}
 
-	tracker, err := ExtractTrackerFromResponse(resp)
+	tracker, err = ExtractTrackerFromResponse(resp)
 	if err != nil {
 		return nil, err
 	}
 
-	tracker.Finish()
-	SetResponseMoneyHeader(tracker, response.Header())
+	/*
+		// if span does not participate in round trips
+		if tracker.CheckOneWay() {
+			maps, err := tracker.SpansMap()
+			if err != nil {
+				return nil, err
+			}
 
-	if mc.Finisher == true {
-		WriteMapsToStringResult()
-	}
+			// mc.moneyLog.Log(logging.MessageKey(), mapsToStringResult(maps))
+		}
 
-	return response, nil
+		/*:w
+		// if this client is an end node write the tracker maps to response writer
+		//
+		// this is turned on at options when this client is created
+		if tracker.Finisher() {
+			maps, err := tracker.SpansMap()
+			if err != nil {
+				return nil, err
+			}
+
+			resp = SetResponseMoneyHeader(maps, resp)
+			// TODO: pipe response to response writer and write spans to headers.
+		}
+	*/
+
+	return resp, nil
 }
 
-func (mc moneyClient) WriteMoneyResponse() {
-	mc.finisher := true
-}
-
-func (mc MoneyClient) Monetize(next client) client {
+func (mc moneyClient) Monetize(next client) client {
 	return moneyClient{client: next}
 }
 
-
-
-
-
-
-
-
+func (mc moneyClient) Finisher() bool {
+	return mc.finish
+}

@@ -97,7 +97,7 @@ func CheckForTrackerInContext(ctx context.Context) bool {
 }
 
 // MapsToStringResult returns the a string of all the traces created under this tracker
-func MapsToStringResult(m []map[string]string) string {
+func mapsToStringResult(m []map[string]string) string {
 	var o = new(bytes.Buffer)
 	for _, v := range m {
 		for k, x := range v {
@@ -113,10 +113,10 @@ func SetRequestMoneyHeader(t *HTTPTracker, r *http.Request) *http.Request {
 	return r
 }
 
-func SetResponseMoneyHeader(t *HTTPTracker, h http.Header) http.Header {
-	t.storeMoneySpans(h)
+func SetResponseMoneyHeader(maps []map[string]string, r *http.Response) *http.Response {
+	r.Header.Set(MoneySpansHeader, mapsToStringResult(maps))
 
-	return h
+	return r
 }
 
 /*

@@ -128,6 +128,7 @@ func TestMap(t *testing.T) {
 	assert.Equal(t, expected, sm)
 }
 
+/*
 func FuncBuildSpanFromMap(t *testing.T) {
 	var (
 		duration = Duration(12)
@@ -150,6 +151,7 @@ func FuncBuildSpanFromMap(t *testing.T) {
 		t.Errorf(err)
 	}
 }
+*/
 
 /*
 func TestString(t *testing.T) {

@@ -129,12 +129,14 @@ func (t *HTTPTracker) Finish() error {
 
 	if !t.done {
 		t.span.Duration = time.Since(t.span.StartTime)
-		//	t.span.Code = //TODO get span code
+		t.span.Code = t.span.Code
 		t.span.Success = t.span.Code < 400
 
 		t.spansList = append(t.spansList, t.span.String())
 		t.spansMaps = append(t.spansMaps, t.span.Map())
 		t.done = true
+
+		// t.storeMoneySpans()
 
 		// TODO: get rid of result field, may need to migrate encodeTraceContext upward
 		return nil
@@ -231,6 +233,18 @@ func (t *HTTPTracker) storeMoneyMaps() {
 	return
 }
 */
+
+func (t *HTTPTracker) OneWay() {
+	t.m.RLock()
+	defer t.m.RUnlock()
+
+	t.span.OneWay = true
+	return
+}
+
+func (t *HTTPTracker) CheckOneWay() bool {
+	return t.span.OneWay
+}
 
 // Returns a HTTPTracker object.
 func (t *HTTPTracker) HTTPTracker() *HTTPTracker {

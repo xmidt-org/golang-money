@@ -2,7 +2,6 @@ package money
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 )
 
@@ -48,28 +47,40 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 		if ok := CheckHeaderForMoneyTrace(request.Header); ok {
 			switch {
 			case hs.Tr1d1um != nil:
-				htTracker, err := StarterProcessTr1d1um(request.Context(), hs, request)
+				tracker, err := StarterProcessTr1d1um(request.Context(), hs, request)
 				if err != nil {
 					next.ServeHTTP(response, request)
 				}
 
-				request = InjectTrackerIntoRequest(request, htTracker)
+				// write the ending span result to headers after all other http.Handlers have finished executing.
+				defer func() {
+					if err := tracker.Finish(); err == nil {
+						maps, err := tracker.SpansMap()
+						if err != nil {
+							return
+						}
+
+						response.Header().Set(MoneySpansHeader, mapsToStringResult(maps))
+					}
+				}()
+
+				request = InjectTrackerIntoRequest(request, tracker)
 				next.ServeHTTP(response, request)
 			case hs.Scytale != nil:
-				htTracker, err := SubTracerProcessScytale(request.Context(), hs, request)
+				tracker, err := SubTracerProcessScytale(request.Context(), hs, request)
 				if err != nil {
 					next.ServeHTTP(response, request)
 				}
 
-				request = InjectTrackerIntoRequest(request, htTracker)
+				request = InjectTrackerIntoRequest(request, tracker)
 				next.ServeHTTP(response, request)
 			case hs.Petasos != nil:
-				htTracker, err := SubTracerProcessPetasos(request.Context(), hs, request)
+				tracker, err := SubTracerProcessPetasos(request.Context(), hs, request)
 				if err != nil {
 					next.ServeHTTP(response, request)
 				}
 
-				request = InjectTrackerIntoRequest(request, htTracker)
+				request = InjectTrackerIntoRequest(request, tracker)
 				next.ServeHTTP(response, request)
 			case hs.Talaria != nil:
 				tracker, err := hs.Talaria(request)
@@ -83,19 +94,6 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 				}
 
 				next.ServeHTTP(response, request)
-				defer func() {
-					tracker, err := ExtractTrackerFromRequest(request)
-					if err != nil {
-						fmt.Print(err)
-					}
-
-					err = tracker.Finish()
-					if err != nil {
-						fmt.Print(err)
-					}
-
-					request = InjectTrackerIntoRequest(request, tracker)
-				}()
 			}
 		} else {
 			next.ServeHTTP(response, request)

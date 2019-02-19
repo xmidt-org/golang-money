@@ -153,7 +153,7 @@ func TestMapsToStringResult(t *testing.T) {
 	)
 
 	maps = append(maps, m)
-	result := MapsToStringResult(maps)
+	result := mapsToStringResult(maps)
 	ok := assert.Equal(t, expected, result)
 	if !ok {
 		t.Errorf("result, '%s\n', does not equal expected, '%s'", result, expected)

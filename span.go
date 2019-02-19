@@ -33,6 +33,7 @@ import (
 type Span struct {
 	Name    string
 	AppName string
+	OneWay  bool
 	TC      *TraceContext
 	Success bool
 	Code    int
@@ -61,6 +62,10 @@ func mapFieldToString(m map[string]interface{}) map[string]string {
 
 	for k, v := range m {
 		switch v.(type) {
+		case int:
+			if k == "Code" {
+				n[k] = fmt.Sprintf("%v", m[k].(int))
+			}
 		case float64:
 			if k == "Duration" {
 				var i = int64(m[k].(float64))
@@ -103,6 +108,7 @@ func (s *Span) String() string {
 
 	o.WriteString("span-name=" + s.Name)
 	o.WriteString(";app-name=" + s.AppName)
+	o.WriteString(";one-way=" + strconv.FormatBool(s.OneWay))
 	o.WriteString(";span-duration=" + strconv.FormatInt(s.Duration.Nanoseconds()/1e3, 10)) //span duration in microseconds
 	//	o.WriteString(";span-duration=" + strconv.FormatInt(s.Duration.Nanoseconds()/1e3, 10)) //span duration in microseconds
 	o.WriteString(";span-success=" + strconv.FormatBool(s.Success))
