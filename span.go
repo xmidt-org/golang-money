@@ -19,8 +19,11 @@ package money
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -28,9 +31,9 @@ import (
 // It is a superset to what is specified in the
 // spec: https://github.com/Comcast/money/wiki#what-is-captured
 type Span struct {
-	//the user gives us these values
 	Name    string
 	AppName string
+	OneWay  bool
 	TC      *TraceContext
 	Success bool
 	Code    int
@@ -42,51 +45,27 @@ type Span struct {
 	Host      string
 }
 
-// Result models the result fields of a span.
-type Result struct {
-	// Name of the Span (i.e HTTPHandler)
-	Name string
-
-	// Start Time
-
-	// Name of the application/service running the Span (i.e. Scytale in XMiDT)
-	AppName string
-
-	// StartTime
-
-	// Code is an abstract value which is up to the span code to supply.
-	// It is not necessary to enforce that this is an HTTP status code.
-	// The translation into an HTTP status code should take place elsewhere.
-	Code int
-
-	// Whether or not this span is defined as "successful"
-	Success bool
-
-	Err error
-
-	StartTime time.Time
-
-	Duration time.Duration
-
-	Host string
-}
-
 // NewSpan returns a new span instance.
-func NewSpan(spanName string, tc *TraceContext) Span {
-	return Span{
-		Name: spanName,
-		TC:   tc,
+func NewSpan(spanName string, tc *TraceContext) *Span {
+	h, _ := os.Hostname()
+	return &Span{
+		Name:    spanName,
+		TC:      tc,
+		Host:    h,
+		AppName: os.Args[0],
 	}
 }
 
-type SpanMap map[string]string
-
 // Changes a maps values to type string.
-func mapFieldToString(m map[string]interface{}) SpanMap {
+func mapFieldToString(m map[string]interface{}) map[string]string {
 	n := make(map[string]string)
 
 	for k, v := range m {
 		switch v.(type) {
+		case int:
+			if k == "Code" {
+				n[k] = fmt.Sprintf("%v", m[k].(int))
+			}
 		case float64:
 			if k == "Duration" {
 				var i = int64(m[k].(float64))
@@ -112,18 +91,15 @@ func mapFieldToString(m map[string]interface{}) SpanMap {
 }
 
 // Map returns a string map representation of the span
-func (s *Span) Map() (SpanMap, error) {
+func (s *Span) Map() map[string]string {
 	var m map[string]interface{}
 
 	// Receive a map of string to objects
-	r, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
+	r, _ := json.Marshal(s)
 
 	json.Unmarshal(r, &m)
 
-	return mapFieldToString(m), nil
+	return mapFieldToString(m)
 }
 
 // String returns the string representation of the span
@@ -132,10 +108,16 @@ func (s *Span) String() string {
 
 	o.WriteString("span-name=" + s.Name)
 	o.WriteString(";app-name=" + s.AppName)
-	o.WriteString(";span-duration=" + fmt.Sprintf("%v"+"ns", s.Duration.Nanoseconds()))
+	o.WriteString(";one-way=" + strconv.FormatBool(s.OneWay))
+	o.WriteString(";span-duration=" + strconv.FormatInt(s.Duration.Nanoseconds()/1e3, 10)) //span duration in microseconds
+	//	o.WriteString(";span-duration=" + strconv.FormatInt(s.Duration.Nanoseconds()/1e3, 10)) //span duration in microseconds
 	o.WriteString(";span-success=" + strconv.FormatBool(s.Success))
-	o.WriteString(";" + encodeTraceContext(s.TC))
-	o.WriteString(";start-time=" + s.StartTime.Format("2006-01-02T15:04:05.999999999Z07:00"))
+
+	o.WriteString(";span-id=" + string(s.TC.SID))
+	o.WriteString(";trace-id=" + s.TC.TID)
+	o.WriteString(";parent-id=" + string(s.TC.PID))
+
+	o.WriteString(fmt.Sprintf(";start-time=%v", +s.StartTime.UTC().UnixNano()))
 
 	if s.Host != "" {
 		o.WriteString(";host=" + s.Host)
@@ -150,4 +132,95 @@ func (s *Span) String() string {
 	}
 
 	return o.String()
+}
+
+// String returns the string representation of the result.
+/*
+func (r *Result) String() string {
+	var o = new(bytes.Buffer)
+
+	o.WriteString("span-name=" + r.Name)
+	o.WriteString(";app-name=" + r.AppName)
+	o.WriteString(";host=" + r.Host)
+	o.WriteString(";trace-context=" + r.TC)
+	o.WriteString(";start-time=" + r.StartTime.String())
+	o.WriteString(";span-duration=" + r.Duration.String())
+
+	return o.String()
+}
+*/
+
+// BuildSpanFromMap builds a http span from a tracker
+func buildSpanFromMap(t map[string]string) (*Span, error) {
+	span := new(Span)
+	//span.TC = t["TC"]
+
+	// TODO: all possible error codes or alternate route.
+	if t["Code"] == "400" {
+		span.Code = 400
+	} else {
+		span.Code = 401
+	}
+
+	if t["Success"] == "false" {
+		span.Success = false
+	} else {
+		span.Success = true
+	}
+
+	start, err := time.Parse("MM/DD/YYYY", t["StartTime"])
+	if err != nil {
+		return nil, err
+	}
+
+	span.StartTime = start
+	duration, err := parseTime(t["Duration"])
+	if err != nil {
+		return nil, err
+	}
+
+	span.Duration = duration
+
+	span.Name = t["Name"]
+	span.AppName = t["AppName"]
+	span.Err = errors.New(t["Err"])
+	span.Host = t["Host"]
+
+	return span, nil
+}
+
+// this needs error handling when their does not exist that split.
+func parseTime(t string) (time.Duration, error) {
+	var (
+		mins, hours int
+		err         error
+	)
+
+	fmt.Print(1)
+	parts := strings.SplitN(t, ":", 2)
+	switch len(parts) {
+	case 1:
+		mins, err = strconv.Atoi(parts[0])
+		if err != nil {
+			return 0, err
+		}
+	case 2:
+		hours, err = strconv.Atoi(parts[0])
+		if err != nil {
+			return 0, err
+		}
+
+		mins, err = strconv.Atoi(parts[1])
+		if err != nil {
+			return 0, err
+		}
+	default:
+		return 0, fmt.Errorf("invalid time: %s", t)
+	}
+
+	if mins > 59 || mins < 0 || hours > 23 || hours < 0 {
+		return 0, fmt.Errorf("invalid time: %s", t)
+	}
+
+	return time.Duration(hours)*time.Hour + time.Duration(mins)*time.Minute, nil
 }

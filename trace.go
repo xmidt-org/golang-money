@@ -25,6 +25,11 @@ type TraceContext struct {
 	PID int64  //Parent ID
 }
 
+// DecodeTraceContext decodes a trace context from a header.
+func DecodeTraceContext(raw string) (tc *TraceContext, err error) {
+	return decodeTraceContext(raw)
+}
+
 // decodeTraceContext returns a TraceContext from the given value "raw"
 // raw is typically taken directly from http.Request headers
 // for now, it is overly strict with the expected format
@@ -32,21 +37,25 @@ type TraceContext struct {
 func decodeTraceContext(raw string) (tc *TraceContext, err error) {
 	tc = new(TraceContext)
 
+	// split raw into seperate strings.  Each being a field of the span type.  i.e Name, TC, HostName...
 	pairs := strings.Split(raw, ";")
 
+	// if there does not exist at least 3 pairs, return a err
 	if len(pairs) != 3 {
 		return nil, errPairsCount
 	}
 
+	//
 	seen := make(map[string]bool)
 
 	for _, pair := range pairs {
+		// split again.  Value parsed is a key value. i.e dogsName = bill
 		kv := strings.Split(pair, "=")
 
 		if len(kv) != 2 {
 			return nil, errBadPair
 		}
-
+		// split kv into key and value.  i.e dogsName: bill
 		var k, v = kv[0], kv[1]
 
 		switch {
@@ -75,7 +84,7 @@ func decodeTraceContext(raw string) (tc *TraceContext, err error) {
 	return
 }
 
-// typeInferenceTC  returns a concatenated string of all field values that exist in a trace context from a map[string]interface{}
+// typeInferenceTC returns a concatenated string of all field values that exist in a trace context from a map[string]interface{}
 func typeInferenceTC(tc interface{}) string {
 	tcs := tc.(map[string]interface{})
 
@@ -95,7 +104,6 @@ func typeInferenceTC(tc interface{}) string {
 	return fmt.Sprintf("%s=%v;%s=%v;%s=%v", pIDKey, m["PID"], sIDKey, m["SID"], tIDKey, m["TID"])
 }
 
-// EncodeTraceContext encodes the TraceContext into a string.
 func encodeTraceContext(tc *TraceContext) string {
 	return fmt.Sprintf("%s=%v;%s=%v;%s=%v", pIDKey, tc.PID, sIDKey, tc.SID, tIDKey, tc.TID)
 }
@@ -105,8 +113,8 @@ func EncodeTraceContext(tc *TraceContext) string {
 	return encodeTraceContext(tc)
 }
 
-// SubTrace creates a child trace context for current
-func SubTrace(current *TraceContext) *TraceContext {
+// doSubTrace creates a child trace context from the current span
+func doSubTrace(current *TraceContext) *TraceContext {
 	rand.Seed(time.Now().Unix())
 	return &TraceContext{
 		PID: current.SID,

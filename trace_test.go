@@ -110,12 +110,12 @@ func TestEncodeTraceContext(t *testing.T) {
 	}
 }
 
-func TestSubtrace(t *testing.T) {
+func TestDoSubtrace(t *testing.T) {
 	current := &TraceContext{
 		TID: "123",
 		SID: 1,
 	}
-	st := SubTrace(current)
+	st := doSubTrace(current)
 
 	if st.PID != current.SID {
 		t.Errorf("Expected pid to be %v but got %v", current.PID, st.PID)

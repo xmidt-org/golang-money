@@ -3,105 +3,128 @@ package money
 import (
 	"context"
 	"net/http"
-	"time"
 )
 
-// Spanner acts as the factory for spans for all downstream code.
+// Spanner is an interface which represents different ways spanning occurs.
 type Spanner interface {
-	Start(context.Context, Span) Tracker
+	ServerDecorator(context.Context, *HTTPSpanner, http.Handler, *http.Request, http.ResponseWriter) http.Handler
 }
 
-//SpanDecoder decodes an X-Money span off a request
-type SpanDecoder func(*http.Request) (Span, error)
+// MoneyContainer holds the minimum primitives to complete money spans for all servers scytale, talaria, petasos,
+// talaria
+//
+// talaria is a special case that needs use of a channel
+type MoneyContainer interface {
+	ServerDecorator(context.Context, *HTTPSpanner, http.Handler, *http.Request, http.ResponseWriter) http.Handler
+}
 
-// HTTPSpanner implements Spanner and is the root factory
-// for HTTP spans
+// ServerDecorator a function signature for server decorators
+type ServerDecorator func(context.Context, *HTTPSpanner, http.Handler, *http.Request, http.ResponseWriter) http.Handler
+
+// HTTPSpanner implements a Spanner and its future possible options.
+//
+// Future created spanner options go here.
 type HTTPSpanner struct {
-	SD SpanDecoder
+	Tr1d1um Starter
+	Scytale SubTracer
+	Petasos SubTracer
+	Talaria SubTracer
 }
 
-//Start defines the start time of the input span s and returns
-//a tracker object which can both start a child span for s as
-//well as mark the end of span s
-func (hs *HTTPSpanner) Start(ctx context.Context, s Span) Tracker {
-	s.StartTime = time.Now()
-
-	return &HTTPTracker{
-		span:    s,
-		Spanner: hs,
+func NewHTTPSpanner(options HTTPSpannerOptions) *HTTPSpanner {
+	hs := new(HTTPSpanner)
+	if options == nil {
+		return hs
 	}
+
+	options(hs)
+
+	return hs
 }
 
-//Decorate provides an Alice-style decorator for handlers
-//that wish to use money
-func (hs *HTTPSpanner) Decorate(appName string, next http.Handler) http.Handler {
-	if hs == nil {
-		// allow DI of nil values to shut off money trace
-		return next
-	}
-
+func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		if span, err := hs.SD(request); err == nil {
-			span.AppName, span.Name = appName, "ServeHTTP"
-			tracker := hs.Start(request.Context(), span)
+		if ok := CheckHeaderForMoneyTrace(request.Header); ok {
+			switch {
+			case hs.Tr1d1um != nil:
+				tracker, err := StarterProcessTr1d1um(request.Context(), hs, request)
+				if err != nil {
+					next.ServeHTTP(response, request)
+				}
 
-			ctx := context.WithValue(request.Context(), contextKeyTracker, tracker)
+				// write the ending span result to headers after all other http.Handlers have finished executing.
+				defer func() {
+					if err := tracker.Finish(); err == nil {
+						maps, err := tracker.SpansMap()
+						if err != nil {
+							return
+						}
 
-			s := simpleResponseWriter{
-				code:           http.StatusOK,
-				ResponseWriter: response,
+						response.Header().Set(MoneySpansHeader, mapsToStringResult(maps))
+					}
+				}()
+
+				request = InjectTrackerIntoRequest(request, tracker)
+				next.ServeHTTP(response, request)
+			case hs.Scytale != nil:
+				tracker, err := SubTracerProcessScytale(request.Context(), hs, request)
+				if err != nil {
+					next.ServeHTTP(response, request)
+				}
+
+				defer func() {
+					err := tracker.Finish()
+					if err != nil {
+						return
+					}
+				}()
+
+				request = InjectTrackerIntoRequest(request, tracker)
+				next.ServeHTTP(response, request)
+			case hs.Petasos != nil:
+				tracker, err := SubTracerProcessPetasos(request.Context(), hs, request)
+				if err != nil {
+					next.ServeHTTP(response, request)
+				}
+
+				defer func() {
+					err := tracker.Finish()
+					if err != nil {
+						return
+					}
+				}()
+
+				request = InjectTrackerIntoRequest(request, tracker)
+				next.ServeHTTP(response, request)
+			case hs.Talaria != nil:
+				tracker, err := hs.Talaria(request)
+				if err != nil {
+					next.ServeHTTP(response, request)
+				}
+
+				tracker, err = tracker.SubTrace(request.Context(), hs)
+				if err != nil {
+					next.ServeHTTP(response, request)
+				}
+
+				defer func() {
+					err := tracker.Finish()
+					if err != nil {
+						return
+					}
+				}()
+
+				next.ServeHTTP(response, request)
 			}
-
-			next.ServeHTTP(s, request.WithContext(ctx))
-
-			//TODO: application and not library code should finish the above tracker
-			//such that information on it could be forwarded
-			//once confirmed, delete the below
-
-			// tracker.Finish(Result{
-			// 	Name:    "ServeHTTP",
-			// 	AppName: appName,
-			// 	Code:    s.code,
-			// 	Success: s.code < 400,
-			// })
-
 		} else {
 			next.ServeHTTP(response, request)
 		}
 	})
 }
 
-type HTTPSpannerOptions func(*HTTPSpanner)
-
-func NewHTTPSpanner(options ...HTTPSpannerOptions) (spanner *HTTPSpanner) {
-	spanner = new(HTTPSpanner)
-
-	//define the default behavior which is a simple
-	//extraction of money trace context off the headers
-	//it is overwritten if the options change it
-	spanner.SD = func(r *http.Request) (s Span, err error) {
-		var tc *TraceContext
-		if tc, err = decodeTraceContext(r.Header.Get(MoneyHeader)); err == nil {
-			s = Span{
-				TC: tc,
-			}
-		}
-		return
-	}
-
-	for _, o := range options {
-		o(spanner)
-	}
-	return
-}
-
-// simpleResponseWriter is the core decorated http.ResponseWriter.
-type simpleResponseWriter struct {
-	http.ResponseWriter
-	code int
-}
-
-func (rw simpleResponseWriter) WriteHeader(code int) {
-	rw.code = code
-	rw.WriteHeader(code)
+// Start defines the start time of the input span s and returns
+// a http tracker which can both start a child span using SubTrace
+// as well as mark the end of a span using s
+func (hs *HTTPSpanner) start(ctx context.Context, s *Span) *HTTPTracker {
+	return NewHTTPTracker(ctx, s, hs)
 }
