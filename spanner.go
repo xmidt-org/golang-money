@@ -72,6 +72,13 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 					next.ServeHTTP(response, request)
 				}
 
+				defer func() {
+					err := tracker.Finish()
+					if err != nil {
+						return
+					}
+				}()
+
 				request = InjectTrackerIntoRequest(request, tracker)
 				next.ServeHTTP(response, request)
 			case hs.Petasos != nil:
@@ -79,6 +86,13 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 				if err != nil {
 					next.ServeHTTP(response, request)
 				}
+
+				defer func() {
+					err := tracker.Finish()
+					if err != nil {
+						return
+					}
+				}()
 
 				request = InjectTrackerIntoRequest(request, tracker)
 				next.ServeHTTP(response, request)
@@ -92,6 +106,13 @@ func (hs *HTTPSpanner) Decorate(next http.Handler) http.Handler {
 				if err != nil {
 					next.ServeHTTP(response, request)
 				}
+
+				defer func() {
+					err := tracker.Finish()
+					if err != nil {
+						return
+					}
+				}()
 
 				next.ServeHTTP(response, request)
 			}

@@ -20,11 +20,6 @@ type moneyClient struct {
 	responseWriter http.ResponseWriter
 }
 
-// TODO: implement this. pipeReq pipes the request's headers into the response writer
-func pipeReq(rw http.ResponseWriter, resp *http.Request) {
-	rw.Header().Set(MoneySpansHeader, resp.Header.Get(MoneySpansHeader))
-}
-
 func NewMoneyTransactor(o *Options) moneyClient {
 	return moneyClient{finish: o.Finish}
 }
@@ -32,13 +27,15 @@ func NewMoneyTransactor(o *Options) moneyClient {
 func (mc moneyClient) Do(request *http.Request) (*http.Response, error) {
 	tracker, err := ExtractTrackerFromRequest(request)
 	if err != nil {
+		// run client as normally
 		resp, err := mc.client.Do(request)
 		if err != nil {
 			return nil, err
 		}
 		return resp, nil
 	}
-
+	// run client with a span
+	//
 	// set the request's MoneyHeader with a new trace
 	request = SetRequestMoneyHeader(tracker, request)
 	resp, err := mc.client.Do(request)
@@ -51,39 +48,19 @@ func (mc moneyClient) Do(request *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	/*
-		// if span does not participate in round trips
-		if tracker.CheckOneWay() {
-			maps, err := tracker.SpansMap()
-			if err != nil {
-				return nil, err
-			}
-
-			// mc.moneyLog.Log(logging.MessageKey(), mapsToStringResult(maps))
+	// if span does not participate in round trips
+	if tracker.CheckOneWay() {
+		maps, err := tracker.SpansMap()
+		if err != nil {
+			return nil, err
 		}
 
-		/*:w
-		// if this client is an end node write the tracker maps to response writer
-		//
-		// this is turned on at options when this client is created
-		if tracker.Finisher() {
-			maps, err := tracker.SpansMap()
-			if err != nil {
-				return nil, err
-			}
-
-			resp = SetResponseMoneyHeader(maps, resp)
-			// TODO: pipe response to response writer and write spans to headers.
-		}
-	*/
+		// mc.moneyLog.Log(logging.MessageKey(), mapsToStringResult(maps))
+	}
 
 	return resp, nil
 }
 
 func (mc moneyClient) Monetize(next client) client {
 	return moneyClient{client: next}
-}
-
-func (mc moneyClient) Finisher() bool {
-	return mc.finish
 }
