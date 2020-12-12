@@ -3,9 +3,11 @@
 ##Distributed Tracing using Go
 This is the Go implementation of [Money](https://github.com/Comcast/money)
 
-[![Build Status](https://travis-ci.com/xmidt-org/golang-money.svg?branch=master)](https://travis-ci.org/xmidt-org/golang-money) 
-[![codecov.io](http://codecov.io/github/xmidt-org/golang-money/coverage.svg?branch=master)](http://codecov.io/github/xmidt-org/golang-money?branch=master) 
+[![Build Status](https://travis-ci.com/xmidt-org/golang-money.svg?branch=main)](https://travis-ci.org/xmidt-org/golang-money) 
+[![codecov.io](http://codecov.io/github/xmidt-org/golang-money/coverage.svg?branch=main)](http://codecov.io/github/xmidt-org/golang-money?branch=main) 
 [![Go Report Card](https://goreportcard.com/badge/github.com/xmidt-org/golang-money)](https://goreportcard.com/report/github.com/xmidt-org/golang-money) 
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/xmidt-org/golang-money)](https://pkg.go.dev/github.com/xmidt-org/golang-money)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=xmidt-org_golang-money&metric=alert_status)](https://sonarcloud.io/dashboard?id=xmidt-org_golang-money)
 
 
 ###A Money header looks like the following
