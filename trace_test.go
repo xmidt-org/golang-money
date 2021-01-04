@@ -54,11 +54,8 @@ func TestDecodeTraceContext(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			assert := assert.New(t)
 			actualO, actualE := decodeTraceContext(test.i)
-			if actualE == nil || test.e == nil {
-				assert.Equal(test.e, actualE)
-			} else {
-				assert.Equal(test.e, actualE)
-			}
+			assert.Equal(test.e, actualE)
+
 			assert.Equal(test.o, actualO)
 		})
 	}
