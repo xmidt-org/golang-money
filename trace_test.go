@@ -52,7 +52,7 @@ func TestDecodeTraceContext(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			actualO, actualE := decodeTraceContext(test.i)
-			if actualE != test.e || !reflect.DeepEqual(actualO, test.o) {
+			if actualE.Error() != test.e.Error() || !reflect.DeepEqual(actualO, test.o) {
 				t.Errorf("I was expecting '%v' '%v'", test.e, test.o)
 				t.Errorf("but got '%v' '%v'", actualE, actualO)
 			}
