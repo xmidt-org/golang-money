@@ -103,5 +103,5 @@ type simpleResponseWriter struct {
 
 func (rw simpleResponseWriter) WriteHeader(code int) {
 	rw.code = code
-	rw.WriteHeader(code)
+	rw.ResponseWriter.WriteHeader(code)
 }
