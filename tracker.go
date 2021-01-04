@@ -83,17 +83,13 @@ func (t *HTTPTracker) DecorateTransactor(transactor Transactor, options ...SpanF
 			//the default behavior is always run
 			for k, vs := range resp.Header {
 				if k == MoneySpansHeader {
-					for _, v := range vs {
-						t.spans = append(t.spans, v)
-					}
+					t.spans = append(t.spans, vs...)
 				}
 			}
 
 			//options allow converting different span types into money-compatible ones
 			for _, o := range options {
-				for _, span := range o(resp) {
-					t.spans = append(t.spans, span)
-				}
+				t.spans = append(t.spans, o(resp)...)
 			}
 		}
 		return

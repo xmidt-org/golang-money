@@ -1,8 +1,9 @@
 package money
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDecodeTraceContext(t *testing.T) {
@@ -51,11 +52,11 @@ func TestDecodeTraceContext(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
 			actualO, actualE := decodeTraceContext(test.i)
-			if actualE != test.e || !reflect.DeepEqual(actualO, test.o) {
-				t.Errorf("I was expecting '%v' '%v'", test.e, test.o)
-				t.Errorf("but got '%v' '%v'", actualE, actualO)
-			}
+			assert.Equal(test.e, actualE)
+
+			assert.Equal(test.o, actualO)
 		})
 	}
 }

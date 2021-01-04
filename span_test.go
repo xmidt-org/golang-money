@@ -11,12 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Time stub to simulate a clock
-type Clock interface {
-	Start() time.Time
-	End(t time.Time) time.Duration
-}
-
 type stubClock struct{}
 
 func (stubClock) Start() time.Time { return time.Now() }
