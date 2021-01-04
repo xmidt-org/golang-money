@@ -25,6 +25,10 @@ issues:
         - dupl
         - funlen
 
+    - path: trace\.go
+      # Accept normal random function for determining a starting node
+      text: "G404:"
+
 linters-settings:
   errorlint:
     # Report non-wrapping error creation using fmt.Errorf
