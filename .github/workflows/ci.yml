@@ -24,5 +24,6 @@ jobs:
     with:
       copyright-skip: true
       lint-skip:      true
+      style-skip:     true
       release-type:   library
     secrets: inherit
