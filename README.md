@@ -1,10 +1,11 @@
+We have adopted OTEL instead.
+
 # Money
 
 ## Distributed Tracing using Go
 This is the Go implementation of [Money](https://github.com/Comcast/money)
 
 [![Build Status](https://github.com/xmidt-org/golang-money/actions/workflows/ci.yml/badge.svg)](https://github.com/xmidt-org/golang-money/actions/workflows/ci.yml)
-[![Dependency Updateer](https://github.com/xmidt-org/golang-money/actions/workflows/updater.yml/badge.svg)](https://github.com/xmidt-org/golang-money/actions/workflows/updater.yml)
 [![codecov.io](http://codecov.io/github/xmidt-org/golang-money/coverage.svg?branch=main)](http://codecov.io/github/xmidt-org/golang-money?branch=main)
 [![Go Report Card](https://goreportcard.com/badge/github.com/xmidt-org/golang-money)](https://goreportcard.com/report/github.com/xmidt-org/golang-money)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=xmidt-org_golang-money&metric=alert_status)](https://sonarcloud.io/dashboard?id=xmidt-org_golang-money)
